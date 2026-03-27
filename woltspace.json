@@ -1,0 +1,8 @@
+{
+  "name": "signal-desk-pro",
+  "description": "Landing page for Signal Desk Pro — iOS mix reference tool for recording engineers",
+  "stack": "html",
+  "start": "npx --yes serve -l $PORT .",
+  "keeper": "creationwolt",
+  "emoji": "🎚️"
+}

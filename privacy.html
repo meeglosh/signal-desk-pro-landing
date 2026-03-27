@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy · Signal Desk Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@300;400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black:   #080807;
+      --dark:    #0f0e0c;
+      --panel:   #161410;
+      --surface: #1c1a16;
+      --border:  #2a2620;
+      --border2: #342e26;
+      --muted:   #5a5248;
+      --mid:     #7a7068;
+      --text:    #c8bfb0;
+      --bright:  #e8e0d0;
+      --amber:   #e8820c;
+      --amber2:  #c96e0a;
+      --amber-dim: #7a440a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { background: var(--black); color: var(--text); scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 300;
+      font-size: 16px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(8,8,7,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      color: var(--bright);
+      text-decoration: none;
+    }
+
+    .header-logo span { color: var(--amber); }
+
+    .header-back {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .header-back:hover { color: var(--text); }
+
+    /* ─── PAGE LAYOUT ─── */
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 80px 48px 120px;
+    }
+
+    /* ─── EYEBROW ─── */
+    .page-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 20px;
+    }
+
+    /* ─── TITLE ─── */
+    h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(40px, 6vw, 64px);
+      line-height: 1.0;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--bright);
+      margin-bottom: 16px;
+    }
+
+    .page-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 60px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ─── SUMMARY BOX ─── */
+    .summary-box {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--amber);
+      border-radius: 4px;
+      padding: 24px 28px;
+      margin-bottom: 56px;
+    }
+
+    .summary-box p {
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .summary-box p + p {
+      margin-top: 12px;
+    }
+
+    /* ─── SECTIONS ─── */
+    section {
+      margin-bottom: 52px;
+    }
+
+    h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--bright);
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      list-style: none;
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    ul li {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      padding-left: 20px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--amber);
+    }
+
+    a {
+      color: var(--amber);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 52px 0;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .footer-logo span { color: var(--amber); }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-copy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 0 24px; }
+      main { padding: 56px 24px 96px; }
+      footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; gap: 16px; }
+      .footer-links { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="signal-desk-pro.html" class="header-logo">Signal Desk <span>Pro</span></a>
+    <a href="signal-desk-pro.html" class="header-back">← Back</a>
+  </header>
+
+  <main>
+    <div class="page-eyebrow">Legal</div>
+    <h1>Privacy<br>Policy</h1>
+    <div class="page-date">Effective date: March 27, 2026 &nbsp;·&nbsp; Signal Desk Pro</div>
+
+    <div class="summary-box">
+      <p>The short version: Signal Desk Pro does not require you to create an account. We do not collect, sell, or share your personal data. The only information we may collect is your email address if you choose to sign up for updates, and we will never sell or share that either.</p>
+      <p>This policy explains what we collect, why, and how you can control it.</p>
+    </div>
+
+    <section>
+      <h2>Who We Are</h2>
+      <p>Signal Desk Pro is an iOS application for professional audio playback and mix translation. References to "we," "us," or "our" in this policy refer to the developer of Signal Desk Pro.</p>
+      <p>If you have any questions about this policy, contact us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a>.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>What We Do Not Collect</h2>
+      <p>Signal Desk Pro does not require you to create an account. Because of this, we do not collect, store, or process:</p>
+      <ul>
+        <li>Your name, address, phone number, or any other identifying information</li>
+        <li>Your audio files, mixes, or any content you play or import in the app</li>
+        <li>Usage analytics, behavioral data, or in-app activity</li>
+        <li>Device identifiers used for tracking or advertising</li>
+        <li>Payment or billing information (all purchases are processed by Apple through the App Store)</li>
+      </ul>
+      <p>We do not sell, rent, trade, or otherwise share your personal data with any third party, for any reason, at any time.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>What We Do Collect</h2>
+      <p>The only personal information we collect is your email address, and only if you voluntarily provide it, for example by signing up for product updates or news about Signal Desk Pro.</p>
+      <p>We use your email address solely for:</p>
+      <ul>
+        <li>Sending product updates, release notes, and new feature announcements</li>
+        <li>Occasional marketing communications about Signal Desk Pro</li>
+      </ul>
+      <p>We will never sell your email address. We will never share it with third parties for their own marketing purposes. You can unsubscribe from any email we send at any time using the unsubscribe link included in every message.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Cloud Storage Integrations</h2>
+      <p>Signal Desk Pro can connect to third-party cloud storage services including Dropbox, Google Drive, and iCloud to allow you to browse and import your audio files. When you connect a cloud source:</p>
+      <ul>
+        <li>Authentication is handled directly by the respective service (Dropbox, Google, Apple) using their own OAuth or sign-in flows</li>
+        <li>We do not receive, store, or have access to your cloud storage credentials or passwords</li>
+        <li>We do not upload, copy, or retain any files from your cloud storage</li>
+        <li>File access is used solely to stream or import audio files you select within the app</li>
+      </ul>
+      <p>Your use of Dropbox, Google Drive, or iCloud is subject to those services' own privacy policies. We encourage you to review them separately.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>In-App Purchases</h2>
+      <p>Signal Desk Pro offers optional paid subscriptions and a one-time lifetime purchase through Apple's In-App Purchase system. All billing is handled entirely by Apple. We do not receive or store any payment card information. Apple's privacy policy governs how your payment data is handled.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Your Rights</h2>
+      <p>If you have provided us with your email address and would like to:</p>
+      <ul>
+        <li>Unsubscribe from marketing emails: use the unsubscribe link in any email, or contact us directly</li>
+        <li>Request deletion of your email from our records: email us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a> and we will remove it promptly</li>
+        <li>Ask what information we hold about you: contact us and we will tell you</li>
+      </ul>
+      <p>Because we do not collect personal data beyond email addresses, there is no account to delete and no profile data to export.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Children's Privacy</h2>
+      <p>Signal Desk Pro is not directed at children under the age of 13. We do not knowingly collect any personal information from children. If you believe a child has provided us with their email address, contact us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a> and we will delete it immediately.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Changes to This Policy</h2>
+      <p>We may update this privacy policy from time to time. When we do, we will update the effective date at the top of this page. We encourage you to review this policy periodically. Continued use of Signal Desk Pro after any changes constitutes your acceptance of the updated policy.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Contact</h2>
+      <p>Questions or concerns about this privacy policy? Reach us at:</p>
+      <ul>
+        <li>General: <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a></li>
+        <li>Feedback: <a href="mailto:feedback@signaldeskpro.com">feedback@signaldeskpro.com</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-logo">Signal Desk <span>Pro</span></div>
+    <div class="footer-links">
+      <a href="signal-desk-pro.html">Home</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="mailto:hello@signaldeskpro.com">Contact</a>
+      <a href="mailto:feedback@signaldeskpro.com">Feedback</a>
+    </div>
+    <div class="footer-copy">© Signal Desk Pro</div>
+  </footer>
+
+</body>
+</html>

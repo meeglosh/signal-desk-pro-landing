@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signal Desk Pro: Professional Audio Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black:    #080807;
+      --dark:     #0f0e0c;
+      --panel:    #161410;
+      --surface:  #1c1a16;
+      --border:   #2a2620;
+      --border2:  #342e26;
+      --muted:    #5a5248;
+      --mid:      #7a7068;
+      --text:     #c8bfb0;
+      --bright:   #e8e0d0;
+      --amber:    #e8820c;
+      --amber2:   #c96e0a;
+      --amber3:   #f09030;
+      --amber-dim:#7a440a;
+      --green:    #3ecf60;
+      --yellow:   #e8d020;
+      --red:      #e83020;
+      --vu-off:   #1a1610;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-weight: 300;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── ANIMATED GRADIENT BACKGROUND ─── */
+    #gradient-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    #gradient-bg::before,
+    #gradient-bg::after,
+    #gradient-bg .g3,
+    #gradient-bg .g4 {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.12;
+    }
+
+    /* Blob 1 — large amber, top-left drift */
+    #gradient-bg::before {
+      width: 70vw; height: 70vw;
+      background: radial-gradient(circle, #e8820c 0%, transparent 70%);
+      top: -20vw; left: -20vw;
+      animation: drift-a 22s ease-in-out infinite alternate;
+    }
+
+    /* Blob 2 — warm amber, bottom-right drift */
+    #gradient-bg::after {
+      width: 60vw; height: 60vw;
+      background: radial-gradient(circle, #c96e0a 0%, transparent 70%);
+      bottom: -15vw; right: -15vw;
+      animation: drift-b 28s ease-in-out infinite alternate;
+    }
+
+    /* Blob 3 — cooler amber, centre drift */
+    #gradient-bg .g3 {
+      width: 50vw; height: 50vw;
+      background: radial-gradient(circle, #7a3a08 0%, transparent 70%);
+      top: 30%; left: 30%;
+      opacity: 0.10;
+      animation: drift-c 34s ease-in-out infinite alternate;
+    }
+
+    /* Blob 4 — tight hot spot, slow wander */
+    #gradient-bg .g4 {
+      width: 30vw; height: 30vw;
+      background: radial-gradient(circle, #f09030 0%, transparent 65%);
+      top: 10%; right: 20%;
+      opacity: 0.07;
+      animation: drift-d 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift-a {
+      0%   { transform: translate(0, 0) scale(1); }
+      33%  { transform: translate(18vw, 12vh) scale(1.1); }
+      66%  { transform: translate(8vw, 28vh) scale(0.92); }
+      100% { transform: translate(22vw, 18vh) scale(1.05); }
+    }
+    @keyframes drift-b {
+      0%   { transform: translate(0, 0) scale(1); }
+      33%  { transform: translate(-14vw, -10vh) scale(1.08); }
+      66%  { transform: translate(-22vw, -20vh) scale(0.95); }
+      100% { transform: translate(-10vw, -14vh) scale(1.12); }
+    }
+    @keyframes drift-c {
+      0%   { transform: translate(0, 0) scale(1); }
+      50%  { transform: translate(-20vw, 14vh) scale(1.15); }
+      100% { transform: translate(16vw, -18vh) scale(0.88); }
+    }
+    @keyframes drift-d {
+      0%   { transform: translate(0, 0); }
+      50%  { transform: translate(10vw, 20vh); }
+      100% { transform: translate(-12vw, 8vh); }
+    }
+
+    /* ─── NOISE TEXTURE OVERLAY ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 56px;
+      background: rgba(8,8,7,0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--bright);
+    }
+
+    .logo span {
+      color: var(--amber);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    nav a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    nav a:hover { color: var(--text); }
+
+    .nav-cta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--amber) !important;
+      border: 1px solid var(--amber-dim);
+      padding: 7px 16px;
+      border-radius: 2px;
+      transition: all 0.2s !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--amber) !important;
+      color: var(--black) !important;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 48px 80px;
+      position: relative;
+    }
+
+    .hero-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,130,12,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,130,12,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 20%, transparent 80%);
+    }
+
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      width: 32px;
+      height: 1px;
+      background: var(--amber-dim);
+    }
+
+    h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(64px, 10vw, 128px);
+      line-height: 0.9;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      color: var(--bright);
+      text-align: center;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    h1 .pro {
+      color: var(--amber);
+      font-style: italic;
+    }
+
+    .hero-sub {
+      font-family: 'Barlow', sans-serif;
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--mid);
+      text-align: center;
+      max-width: 480px;
+      margin: 24px auto 64px;
+      line-height: 1.7;
+    }
+
+    /* ─── VU METER UNIT ─── */
+    .vu-display {
+      width: 100%;
+      max-width: 760px;
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 24px 32px;
+      position: relative;
+      box-shadow:
+        0 0 0 1px var(--border),
+        0 40px 80px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.03);
+      margin-bottom: 64px;
+    }
+
+    .vu-display::before {
+      content: 'SIGNAL DESK PRO — LEVEL MONITOR';
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .vu-meters {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .vu-channel {
+      flex: 1;
+    }
+
+    .vu-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .vu-bar {
+      height: 28px;
+      background: var(--vu-off);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      gap: 2px;
+      padding: 3px;
+    }
+
+    .vu-segment {
+      flex: 1;
+      border-radius: 1px;
+      transition: background 0.04s;
+    }
+
+    /* Scale labels */
+    .vu-scale {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 2px;
+      margin-top: 4px;
+    }
+
+    .vu-scale span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    /* Playback info strip */
+    .track-info {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .track-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: 0.02em;
+      color: var(--bright);
+      flex: 1;
+    }
+
+    .track-artist {
+      font-size: 13px;
+      color: var(--mid);
+      font-weight: 300;
+    }
+
+    .track-badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+    }
+
+    .badge.format {
+      color: var(--amber);
+      border-color: var(--amber-dim);
+    }
+
+    /* Scrubber */
+    .scrubber {
+      margin-top: 16px;
+    }
+
+    .scrubber-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .scrubber-fill {
+      height: 100%;
+      width: 42%;
+      background: linear-gradient(90deg, var(--amber2), var(--amber));
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .scrubber-fill::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background: var(--amber3);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--amber);
+    }
+
+    .scrubber-times {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .scrubber-times span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* Controls row */
+    .controls-row {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ctrl-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--mid);
+    }
+
+    .ctrl-btn:hover { border-color: var(--border2); color: var(--text); }
+
+    .ctrl-btn.play {
+      width: 40px;
+      height: 40px;
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+    }
+
+    .ctrl-btn.play:hover { background: var(--amber3); }
+
+    .spacer { flex: 1; }
+
+    .feat-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 6px 10px;
+      border-radius: 2px;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .feat-btn.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+    }
+
+    .feat-btn:hover:not(.active) {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    /* ─── HERO STATS ─── */
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      margin-top: 0;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 42px;
+      line-height: 1;
+      color: var(--bright);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-num span {
+      color: var(--amber);
+    }
+
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    .stat-divider {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+    }
+
+    /* ─── SECTION SCAFFOLDING ─── */
+    section {
+      padding: 100px 48px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      margin-bottom: 64px;
+    }
+
+    .section-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: clamp(40px, 6vw, 72px);
+      line-height: 0.95;
+      text-transform: uppercase;
+      color: var(--bright);
+      letter-spacing: -0.01em;
+    }
+
+    h2 em {
+      font-style: italic;
+      color: var(--amber);
+    }
+
+    .section-desc {
+      font-size: 17px;
+      color: var(--mid);
+      max-width: 460px;
+      margin-top: 20px;
+      line-height: 1.8;
+      font-weight: 300;
+    }
+
+    /* ─── DIVIDER ─── */
+    .section-divider {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    }
+
+    /* ─── FEATURES GRID ─── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+    }
+
+    .feature-card {
+      background: var(--dark);
+      padding: 40px 36px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s;
+    }
+
+    .feature-card:hover {
+      background: var(--panel);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--amber);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .feature-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--border2);
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 20px;
+      color: var(--amber);
+    }
+
+    .feature-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--bright);
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--mid);
+      line-height: 1.75;
+      font-weight: 300;
+    }
+
+    /* ─── SIGNAL CHAIN SECTION ─── */
+    .signal-chain {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 80px 48px;
+    }
+
+    .signal-chain-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    /* Mini VU mockup in features */
+    .mini-vu {
+      background: var(--dark);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 16px 20px;
+      margin-bottom: 40px;
+    }
+
+    .mini-vu-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .mini-vu-bar {
+      height: 16px;
+      background: var(--vu-off);
+      border-radius: 1px;
+      overflow: hidden;
+      display: flex;
+      gap: 1px;
+      padding: 2px;
+      margin-bottom: 6px;
+    }
+
+    .mini-vu-seg {
+      flex: 1;
+      border-radius: 1px;
+    }
+
+    .mode-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 32px;
+    }
+
+    .mode-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 8px 14px;
+      border-radius: 2px;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+    }
+
+    .mode-tag.lit {
+      background: rgba(232,130,12,0.1);
+      border-color: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    /* ─── SPEC TABLE ─── */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .spec-table tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .spec-table tr:last-child { border-bottom: none; }
+
+    .spec-table td {
+      padding: 14px 0;
+      font-size: 14px;
+    }
+
+    .spec-table td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      width: 180px;
+    }
+
+    .spec-table td:last-child {
+      color: var(--text);
+    }
+
+    .spec-table tr:hover td { color: var(--bright); }
+    .spec-table tr:hover td:first-child { color: var(--amber); }
+
+    /* ─── FORMAT SUPPORT ─── */
+    .formats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    .format-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      color: var(--text);
+      background: var(--surface);
+      letter-spacing: 0.08em;
+    }
+
+    .format-pill.hi {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+      background: rgba(232,130,12,0.06);
+    }
+
+    /* ─── CTA SECTION ─── */
+    .cta-section {
+      padding: 120px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(232,130,12,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .cta-pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--amber);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+
+    .cta-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(52px, 8vw, 96px);
+      line-height: 0.9;
+      text-transform: uppercase;
+      color: var(--bright);
+      margin-bottom: 24px;
+    }
+
+    .cta-sub {
+      font-size: 16px;
+      color: var(--mid);
+      margin-bottom: 48px;
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 16px 40px;
+      background: var(--amber);
+      color: var(--black);
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--amber3);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(232,130,12,0.3);
+    }
+
+    .btn-secondary {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 16px 40px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--mid);
+      color: var(--bright);
+    }
+
+    .platform-note {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-top: 24px;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .footer-logo span { color: var(--amber); }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-copy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes vu-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-eyebrow { animation: fade-up 0.6s ease both; }
+    h1 { animation: fade-up 0.6s 0.1s ease both; }
+    .hero-sub { animation: fade-up 0.6s 0.2s ease both; }
+    .vu-display { animation: fade-up 0.7s 0.3s ease both; }
+    .hero-stats { animation: fade-up 0.6s 0.45s ease both; }
+
+    /* ─── FEATURE SECTIONS (2-col) ─── */
+    .feat-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 100px 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .feat-section.flip {
+      direction: rtl;
+    }
+    .feat-section.flip > * { direction: ltr; }
+
+    .screenshot-mock {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 280px;
+      aspect-ratio: 9/19;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .screenshot-mock::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 80px; height: 20px;
+      background: var(--black);
+      border-radius: 0 0 12px 12px;
+      z-index: 2;
+    }
+
+    .mock-screen {
+      position: absolute;
+      inset: 0;
+      padding: 32px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mock-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .mock-btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .mock-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 5px 8px;
+      border-radius: 2px;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--muted);
+    }
+
+    .mock-btn.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+    }
+
+    .mock-meter-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mock-meter-bar {
+      height: 10px;
+      background: var(--vu-off);
+      border-radius: 1px;
+      overflow: hidden;
+      display: flex;
+      gap: 1px;
+      padding: 2px;
+    }
+
+    .mock-seg {
+      flex: 1;
+      border-radius: 1px;
+    }
+
+    .mock-track {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 8px 10px;
+      margin-top: 4px;
+    }
+
+    .mock-track-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--bright);
+      margin-bottom: 2px;
+    }
+
+    .mock-track-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .mock-scrub {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      margin-top: 6px;
+      position: relative;
+    }
+
+    .mock-scrub-fill {
+      width: 38%;
+      height: 100%;
+      background: var(--amber);
+      border-radius: 1px;
+    }
+
+    .mock-source-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .mock-source {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+
+    .mock-source-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      background: var(--border2);
+      flex-shrink: 0;
+    }
+
+    .mock-source-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+    }
+
+    .mock-source-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      color: var(--muted);
+    }
+
+    .mock-vectorscope {
+      flex: 1;
+      background: var(--vu-off);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+      min-height: 80px;
+    }
+
+    .mock-vectorscope svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .screenshot-mock img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      border-radius: 8px;
+    }
+
+    /* ─── MODES / METERS SECTION ─── */
+    .modes-section {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 80px 48px;
+    }
+
+    .modes-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+    }
+
+    .modes-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .mode-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      padding: 9px 14px;
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-tier {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 2px 5px;
+      border-radius: 2px;
+      border: 1px solid var(--amber-dim);
+      color: var(--amber);
+    }
+
+    .mode-tier.free {
+      color: var(--muted);
+      border-color: var(--border2);
+    }
+
+    /* ─── PRICING TABLE ─── */
+    .pricing-section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 100px 48px;
+      text-align: center;
+    }
+
+    .pricing-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 48px;
+      text-align: left;
+    }
+
+    .pricing-table th {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      text-align: center;
+      border-bottom: 2px solid var(--border2);
+      color: var(--bright);
+    }
+
+    .pricing-table th:first-child {
+      text-align: left;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+    }
+
+    .pricing-table th.pro-col { color: var(--amber); }
+
+    .pricing-table td {
+      padding: 13px 24px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .pricing-table td:first-child {
+      text-align: left;
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 300;
+    }
+
+    .pricing-table tr:last-child td { border-bottom: none; }
+    .pricing-table tr:hover td { background: rgba(255,255,255,0.012); }
+
+    .check { font-size: 16px; }
+    .check-free { color: var(--mid); }
+    .check-pro  { color: var(--amber); }
+
+    .pricing-plans {
+      display: flex;
+      gap: 12px;
+      margin-top: 40px;
+      justify-content: center;
+    }
+
+    .plan-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      padding: 10px 24px;
+      border: 1px solid var(--border2);
+      border-radius: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .plan-pill:hover {
+      border-color: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    /* ─── ILLUSTRATION PANELS ─── */
+    .illus-panel {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 4/5;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .illus-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .illus-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1;
+      gap: 3px;
+      padding: 2px;
+      border-radius: 3px;
+      background: #1a1510;
+      border: 1px solid #2a2218;
+      color: var(--muted);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .illus-btn svg {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+      stroke-width: 1.3;
+    }
+
+    .illus-btn span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .illus-btn.on {
+      background: var(--amber);
+      border-color: var(--amber3);
+      color: #0a0804;
+      box-shadow: 0 0 14px rgba(232,130,12,0.35), 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--black); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <!-- ANIMATED GRADIENT BACKGROUND -->
+  <div id="gradient-bg"><div class="g3"></div><div class="g4"></div></div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Signal Desk <span>Pro</span></div>
+    <nav>
+      <a href="#console">Console</a>
+      <a href="#meters">Meters</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#download" class="nav-cta">Download on <span style="text-transform:none;">i</span>OS</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-grid-bg"></div>
+
+    <div class="hero-eyebrow">Professional iOS Audio Player</div>
+
+    <h1>Mix Translation.<br>In Your <span class="pro">Pocket.</span></h1>
+
+    <p class="hero-sub">
+      Signal Desk Pro is a professional audio player for iOS. Process, analyze, and export your mixes anywhere.
+    </p>
+
+    <!-- VU METER DISPLAY -->
+    <div class="vu-display">
+      <div class="vu-meters" style="gap:12px;">
+        <!-- Left analog gauge -->
+        <div class="vu-channel" style="background:var(--dark); border:1px solid var(--border); border-radius:3px; padding:6px 8px;">
+          <svg viewBox="0 0 160 110" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="vgA" cx="50%" cy="78%" r="65%">
+                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
+                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
+                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="160" height="110" rx="3" fill="#130f09"/>
+            <rect width="160" height="110" rx="3" fill="url(#vgA)"/>
+            <!-- Arc zones: center (80,100), r=72 -->
+            <path d="M 10.5 81.4 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#1c1710" stroke-width="5"/>
+            <path d="M 10.5 81.4 A 72 72 0 0 1 122.3 41.7" fill="none" stroke="#3ecf60" stroke-width="5" opacity="0.38"/>
+            <path d="M 122.3 41.7 A 72 72 0 0 1 139.0 58.7" fill="none" stroke="#e8d020" stroke-width="5" opacity="0.38"/>
+            <path d="M 139.0 58.7 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#e83020" stroke-width="5" opacity="0.38"/>
+            <!-- Inner arc shadow -->
+            <path d="M 18.5 84.7 A 62 62 0 0 1 141.5 84.7" fill="none" stroke="#0d0b07" stroke-width="2" opacity="0.6"/>
+            <!-- Tick marks -->
+            <line x1="10.5" y1="81.4" x2="17.5" y2="82.8" stroke="#2a2418" stroke-width="1"/>
+            <line x1="44.3" y1="44.9" x2="49.3" y2="48.2" stroke="#2a2418" stroke-width="1"/>
+            <line x1="80" y1="28" x2="80" y2="35" stroke="#2a2418" stroke-width="1"/>
+            <line x1="122.3" y1="41.7" x2="117.8" y2="46.4" stroke="#2a2418" stroke-width="1"/>
+            <line x1="139.0" y1="58.7" x2="133.8" y2="62.7" stroke="#e83020" stroke-width="1" opacity="0.5"/>
+            <line x1="149.5" y1="81.4" x2="142.5" y2="82.8" stroke="#e83020" stroke-width="1" opacity="0.5"/>
+            <!-- Scale labels -->
+            <text x="6" y="93" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-20</text>
+            <text x="80" y="22" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-7</text>
+            <text x="154" y="93" fill="#c03018" font-size="7" font-family="monospace" text-anchor="middle" opacity="0.7">+3</text>
+            <!-- Needle -->
+            <line x1="80" y1="100" x2="80" y2="32" stroke="#e8ddd0" stroke-width="1.2" stroke-linecap="round">
+              <animateTransform attributeName="transform" type="rotate"
+                values="16 80 100; 23 80 100; 9 80 100; 26 80 100; 7 80 100; 19 80 100; 13 80 100; 22 80 100; 16 80 100"
+                keyTimes="0;0.12;0.27;0.44;0.57;0.70;0.82;0.93;1"
+                dur="3.4s" repeatCount="indefinite"
+                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+            </line>
+            <!-- Pivot -->
+            <circle cx="80" cy="100" r="4" fill="#e8820c"/>
+            <circle cx="80" cy="100" r="1.8" fill="#0d0b07"/>
+            <!-- Reading + label -->
+            <text x="80" y="70" fill="#a09080" font-size="11" font-family="monospace" text-anchor="middle">-6.1</text>
+            <text x="80" y="81" fill="#3a3020" font-size="7" font-family="monospace" text-anchor="middle">dBVU</text>
+            <text x="80" y="96" fill="#4a4030" font-size="7.5" font-family="monospace" text-anchor="middle" letter-spacing="4">L</text>
+          </svg>
+        </div>
+        <!-- Right analog gauge -->
+        <div class="vu-channel" style="background:var(--dark); border:1px solid var(--border); border-radius:3px; padding:6px 8px;">
+          <svg viewBox="0 0 160 110" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="vgB" cx="50%" cy="78%" r="65%">
+                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
+                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
+                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="160" height="110" rx="3" fill="#130f09"/>
+            <rect width="160" height="110" rx="3" fill="url(#vgB)"/>
+            <path d="M 10.5 81.4 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#1c1710" stroke-width="5"/>
+            <path d="M 10.5 81.4 A 72 72 0 0 1 122.3 41.7" fill="none" stroke="#3ecf60" stroke-width="5" opacity="0.38"/>
+            <path d="M 122.3 41.7 A 72 72 0 0 1 139.0 58.7" fill="none" stroke="#e8d020" stroke-width="5" opacity="0.38"/>
+            <path d="M 139.0 58.7 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#e83020" stroke-width="5" opacity="0.38"/>
+            <path d="M 18.5 84.7 A 62 62 0 0 1 141.5 84.7" fill="none" stroke="#0d0b07" stroke-width="2" opacity="0.6"/>
+            <line x1="10.5" y1="81.4" x2="17.5" y2="82.8" stroke="#2a2418" stroke-width="1"/>
+            <line x1="44.3" y1="44.9" x2="49.3" y2="48.2" stroke="#2a2418" stroke-width="1"/>
+            <line x1="80" y1="28" x2="80" y2="35" stroke="#2a2418" stroke-width="1"/>
+            <line x1="122.3" y1="41.7" x2="117.8" y2="46.4" stroke="#2a2418" stroke-width="1"/>
+            <line x1="139.0" y1="58.7" x2="133.8" y2="62.7" stroke="#e83020" stroke-width="1" opacity="0.5"/>
+            <line x1="149.5" y1="81.4" x2="142.5" y2="82.8" stroke="#e83020" stroke-width="1" opacity="0.5"/>
+            <text x="6" y="93" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-20</text>
+            <text x="80" y="22" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-7</text>
+            <text x="154" y="93" fill="#c03018" font-size="7" font-family="monospace" text-anchor="middle" opacity="0.7">+3</text>
+            <line x1="80" y1="100" x2="80" y2="32" stroke="#e8ddd0" stroke-width="1.2" stroke-linecap="round">
+              <animateTransform attributeName="transform" type="rotate"
+                values="14 80 100; 25 80 100; 11 80 100; 21 80 100; 6 80 100; 20 80 100; 15 80 100; 24 80 100; 14 80 100"
+                keyTimes="0;0.10;0.25;0.42;0.56;0.68;0.80;0.92;1"
+                dur="3.0s" repeatCount="indefinite"
+                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+            </line>
+            <circle cx="80" cy="100" r="4" fill="#e8820c"/>
+            <circle cx="80" cy="100" r="1.8" fill="#0d0b07"/>
+            <text x="80" y="70" fill="#a09080" font-size="11" font-family="monospace" text-anchor="middle">-5.9</text>
+            <text x="80" y="81" fill="#3a3020" font-size="7" font-family="monospace" text-anchor="middle">dBVU</text>
+            <text x="80" y="96" fill="#4a4030" font-size="7.5" font-family="monospace" text-anchor="middle" letter-spacing="4">R</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="track-info">
+        <div style="flex:1">
+          <div class="track-title">Late Bloom_v1.3</div>
+          <div class="track-artist">3:48 &nbsp;·&nbsp; Dropbox</div>
+        </div>
+        <div class="track-badges">
+          <span class="badge format">AIFF</span>
+          <span class="badge">57.6 MB</span>
+        </div>
+      </div>
+
+      <div class="scrubber">
+        <div class="scrubber-bar">
+          <div class="scrubber-fill"></div>
+        </div>
+        <div class="scrubber-times">
+          <span>1:35</span>
+          <span>3:48</span>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button class="ctrl-btn" title="Skip back">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h2v12H3zm3.5 6L13 2v12z"/></svg>
+        </button>
+        <button class="ctrl-btn" title="Shuffle">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3L9.5 8 5 13h2l4.5-5L7 3zm3 0l4.5 5-4.5 5h2l4.5-5L10 3z"/></svg>
+        </button>
+        <button class="ctrl-btn play" title="Play/Pause">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6z"/></svg>
+        </button>
+        <button class="ctrl-btn" title="Repeat">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 6h10V4l4 3-4 3V8H4v4H2zm12 4H4v2l-4-3 4-3v2h10z"/></svg>
+        </button>
+        <button class="ctrl-btn" title="Skip forward">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13 2h-2v12h2zM9.5 8L3 2v12z"/></svg>
+        </button>
+
+        <div class="spacer"></div>
+
+        <button class="feat-btn">STEREO</button>
+        <button class="feat-btn active">CAR SIM</button>
+        <button class="feat-btn">MONO</button>
+        <button class="feat-btn">BASS MONO</button>
+        <button class="feat-btn">M/S FLIP</button>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">12<span>+</span></div>
+        <div class="stat-label">Console Modes</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-num">8</div>
+        <div class="stat-label">Meter Types</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Export Formats</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-num">iOS<span>16+</span></div>
+        <div class="stat-label">Platform</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE GRID -->
+  <section style="padding-top:0; max-width:100%; padding-left:0; padding-right:0;">
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-num">01</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="4" y="10" width="14" height="20" rx="2"/>
+          <rect x="22" y="10" width="14" height="20" rx="2"/>
+          <path d="M8 24V18l3-4 3 6 2-3 3 7" stroke-width="1.2"/>
+          <path d="M26 24V18l3-4 3 6 2-3 3 7" stroke-width="1.2"/>
+        </svg>
+        <div class="feature-title">Console Modes</div>
+        <div class="feature-desc">12 signal processing modes: from Reference and Dim to Car Sim, Phone Sim, and Crossfeed. Tap once to engage. Tap again to instantly A/B against your unprocessed source.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-num">02</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="4" y="16" width="32" height="8" rx="1"/>
+          <rect x="7" y="18.5" width="3" height="3" fill="currentColor" opacity="0.3"/>
+          <rect x="11" y="18.5" width="3" height="3" fill="currentColor" opacity="0.45"/>
+          <rect x="15" y="18.5" width="3" height="3" fill="currentColor" opacity="0.6"/>
+          <rect x="19" y="18.5" width="3" height="3" fill="currentColor" opacity="0.75"/>
+          <rect x="23" y="18.5" width="3" height="3" fill="currentColor" opacity="0.9"/>
+          <rect x="27" y="18.5" width="3" height="3" fill="currentColor"/>
+          <rect x="31" y="18.5" width="2" height="3" fill="#e83020"/>
+        </svg>
+        <div class="feature-title">Professional Metering</div>
+        <div class="feature-desc">A swipeable suite of 8 calibrated meters: Waveform, Digital VU, Analog VU, Spectrum Analyzer, LUFS Loudness, Stereo Field, Oscilloscope, and Phase Correlation.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-num">03</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M20 6 L20 26"/>
+          <path d="M13 13 L20 6 L27 13"/>
+          <rect x="8" y="26" width="24" height="10" rx="2"/>
+          <path d="M14 31 h4 M22 31 h4" stroke-width="1" opacity="0.5"/>
+        </svg>
+        <div class="feature-title">Render &amp; Share</div>
+        <div class="feature-desc">Activate any console mode and export a full-quality processed version with your settings baked in. WAV, AIFF, or AAC. Send via AirDrop, Dropbox, or Messages.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-num">04</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="20" cy="14" r="8"/>
+          <path d="M7 34 C7 27 33 27 33 34" stroke-width="1.5"/>
+          <path d="M16 14 l3 3 5-5" stroke-width="1.8" stroke="currentColor"/>
+        </svg>
+        <div class="feature-title">Cloud Sources</div>
+        <div class="feature-desc">Connect Dropbox, Google Drive, or iCloud and browse your catalog directly. Sync folders automatically. Signal Desk Pro detects new tracks, updates, and deletions.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-num">05</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="6" y="8" width="28" height="6" rx="1.5"/>
+          <rect x="6" y="18" width="28" height="6" rx="1.5"/>
+          <rect x="6" y="28" width="18" height="6" rx="1.5"/>
+          <circle cx="30" cy="31" r="5" fill="var(--amber)" stroke="none" opacity="0.15"/>
+          <path d="M27 31 l2 2 4-4" stroke="var(--amber)" stroke-width="1.5"/>
+        </svg>
+        <div class="feature-title">Library &amp; Playlists</div>
+        <div class="feature-desc">Organize your sessions into named playlists. Browse by source, format, or folder. Your full reference catalog, always at hand.</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-num">06</div>
+        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="20" cy="20" r="13"/>
+          <path d="M14 20 c0-3.3 2.7-6 6-6 s6 2.7 6 6 -2.7 6-6 6" opacity="0.4"/>
+          <path d="M9 20 c0-6.1 4.9-11 11-11 s11 4.9 11 11" opacity="0.2"/>
+          <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
+        </svg>
+        <div class="feature-title">Free to Start</div>
+        <div class="feature-desc">Download free and start listening immediately. Upgrade to Pro for advanced console modes and meters. Monthly, annual, or lifetime. You choose.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- SECTION 1: CONSOLE MODES -->
+  <div class="feat-section" id="console">
+    <div>
+      <div class="section-tag">Console Modes</div>
+      <h2>Hear How<br>It <em>Translates</em></h2>
+      <p class="section-desc">Your mix on every speaker. Before it's too late. Toggle any console mode to hear exactly how your mix will sound in the real world. Tap once to engage. Tap again to instantly A/B against your unprocessed source.</p>
+    </div>
+    <div>
+      <div class="illus-panel">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="illus-tag">Console Mode</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em; color:var(--amber); border:1px solid var(--amber-dim); border-radius:2px; padding:3px 8px;">A / B</div>
+        </div>
+        <!-- Active mode display -->
+        <div style="text-align:center; padding:0;">
+          <div style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:27px; letter-spacing:0.06em; color:var(--amber); text-shadow:0 0 40px rgba(232,130,12,0.4); line-height:1; text-transform:uppercase;">CAR SIM</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.14em; color:var(--muted); margin-top:4px;">ACTIVE · TAP TO BYPASS</div>
+        </div>
+        <!-- Before / After waveforms -->
+        <div style="display:grid; grid-template-columns:1fr 14px 1fr; gap:6px; align-items:end;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:0.12em; color:var(--muted); margin-bottom:3px; text-align:center;">SOURCE</div>
+            <div style="height:26px; background:var(--surface); border:1px solid var(--border); border-radius:2px; overflow:hidden;">
+              <svg viewBox="0 0 80 36" preserveAspectRatio="none" width="100%" height="100%">
+                <polyline points="0,18 4,12 8,6 12,22 16,8 20,26 24,10 28,28 32,6 36,20 40,10 44,26 48,4 52,22 56,12 60,26 64,8 68,20 72,14 76,24 80,18" fill="none" stroke="#5a5248" stroke-width="1.3"/>
+              </svg>
+            </div>
+          </div>
+          <div style="text-align:center; color:var(--amber); font-size:11px; opacity:0.45; padding-bottom:4px;">›</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:0.12em; color:var(--amber); margin-bottom:3px; text-align:center; opacity:0.7;">PROCESSED</div>
+            <div style="height:26px; background:var(--surface); border:1px solid var(--border); border-radius:2px; overflow:hidden;">
+              <svg viewBox="0 0 80 36" preserveAspectRatio="none" width="100%" height="100%">
+                <polyline points="0,18 4,15 8,12 12,21 16,13 20,22 24,14 28,23 32,11 36,19 40,14 44,22 48,10 52,20 56,15 60,22 64,13 68,19 72,16 76,21 80,18" fill="none" stroke="#e8820c" stroke-width="1.3" opacity="0.8"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <!-- Divider -->
+        <div style="height:1px; background:var(--border);"></div>
+        <!-- Mode grid -->
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:3px;">
+
+          <!-- REF -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1,8 Q4,2 7.5,8 Q11,14 15,8"/>
+            </svg>
+            <span>REF</span>
+          </div>
+
+          <!-- L/R -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="2" y1="5.5" x2="12" y2="5.5"/>
+              <polyline points="10,3.5 12,5.5 10,7.5"/>
+              <line x1="14" y1="10.5" x2="4" y2="10.5"/>
+              <polyline points="6,8.5 4,10.5 6,12.5"/>
+            </svg>
+            <span>L/R</span>
+          </div>
+
+          <!-- MONO -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
+              <circle cx="8" cy="8" r="4.5"/>
+              <circle cx="8" cy="8" r="1.8" fill="currentColor" stroke="none"/>
+            </svg>
+            <span>MONO</span>
+          </div>
+
+          <!-- DIM -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="3" x2="8" y2="11"/>
+              <polyline points="5.5,8.5 8,11 10.5,8.5"/>
+              <line x1="5" y1="13.5" x2="11" y2="13.5"/>
+            </svg>
+            <span>DIM</span>
+          </div>
+
+          <!-- M/S -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
+              <rect x="5.5" y="3" width="5" height="10" rx="0.8" fill="currentColor" stroke="none" opacity="0.65"/>
+              <rect x="1" y="5.5" width="3.5" height="5" rx="0.8"/>
+              <rect x="11.5" y="5.5" width="3.5" height="5" rx="0.8"/>
+            </svg>
+            <span>M/S</span>
+          </div>
+
+          <!-- BASS M -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
+              <path d="M1,11 Q4.5,3 8,11 Q11.5,3 15,11"/>
+              <circle cx="8" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+            <span>BASS M</span>
+          </div>
+
+          <!-- WIDTH -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="1" y1="8" x2="5" y2="8"/>
+              <polyline points="3,6 1,8 3,10"/>
+              <line x1="15" y1="8" x2="11" y2="8"/>
+              <polyline points="13,6 15,8 13,10"/>
+              <line x1="6.5" y1="8" x2="9.5" y2="8" stroke-width="0.7" opacity="0.4"/>
+            </svg>
+            <span>WIDTH</span>
+          </div>
+
+          <!-- PITCH -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="13" x2="8" y2="4"/>
+              <polyline points="5.5,6.5 8,4 10.5,6.5"/>
+              <line x1="5" y1="10.5" x2="11" y2="10.5" stroke-width="0.8" opacity="0.5"/>
+            </svg>
+            <span>PITCH</span>
+          </div>
+
+          <!-- TIME -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
+              <circle cx="8" cy="8.5" r="5.5"/>
+              <line x1="8" y1="8.5" x2="8" y2="5"/>
+              <line x1="8" y1="8.5" x2="11.5" y2="9.5"/>
+            </svg>
+            <span>TIME</span>
+          </div>
+
+          <!-- CAR SIM (active) -->
+          <div class="illus-btn on">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1.5,10 L1.5,8 L4.5,5.5 L11.5,5.5 L14.5,8 L14.5,10"/>
+              <line x1="1.5" y1="10" x2="3" y2="10"/>
+              <line x1="6" y1="10" x2="10" y2="10"/>
+              <line x1="13" y1="10" x2="14.5" y2="10"/>
+              <circle cx="4.5" cy="11.5" r="1.5"/>
+              <circle cx="11.5" cy="11.5" r="1.5"/>
+              <path d="M4.5,5.5 L6,3 L10,3 L11.5,5.5" stroke-width="1"/>
+            </svg>
+            <span>CAR SIM</span>
+          </div>
+
+          <!-- PHONE -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5.5,2.5 L7,2.5 L7.5,5.5 L6,6.5 C7,8 8,9 9.5,9.5 L10.5,8 L13.5,8.5 L13.5,10 C10.5,13.5 3.5,9 3.5,5.5 Z"/>
+            </svg>
+            <span>PHONE</span>
+          </div>
+
+          <!-- XFEED -->
+          <div class="illus-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3,11.5 L3,9 C3,6 5,4 8,4 C11,4 13,6 13,9 L13,11.5"/>
+              <rect x="1.5" y="10.5" width="3" height="4" rx="1"/>
+              <rect x="11.5" y="10.5" width="3" height="4" rx="1"/>
+              <line x1="6" y1="10.5" x2="10" y2="13.5"/>
+              <line x1="6" y1="13.5" x2="10" y2="10.5"/>
+            </svg>
+            <span>XFEED</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- SECTION 2: METERS -->
+  <div class="feat-section flip" id="meters">
+    <div>
+      <div class="section-tag">Metering Suite</div>
+      <h2>See Your<br><em>Audio</em></h2>
+      <p class="section-desc">Professional metering. No studio required. A swipeable suite of calibrated meters gives you the visual analysis tools of a professional studio. In your pocket. From analog VU needles to LUFS loudness to a real-time stereo vectorscope.</p>
+    </div>
+    <div>
+      <div class="illus-panel">
+        <div class="illus-tag">Metering Suite</div>
+        <!-- Dual analog VU gauges -->
+        <div style="display:flex; gap:10px; flex:1; align-items:center;">
+          <!-- Left gauge -->
+          <svg viewBox="0 0 100 82" style="flex:1; overflow:visible;" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="vgC" cx="50%" cy="80%" r="68%">
+                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
+                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
+                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="100" height="82" rx="3" fill="#131109"/>
+            <rect width="100" height="82" rx="3" fill="url(#vgC)"/>
+            <!-- Arc: center (50,72), r=40, from θ=-75° to θ=+75° (CW = sweep=1) -->
+            <path d="M 11.4 61.7 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#1a1610" stroke-width="4"/>
+            <path d="M 11.4 61.7 A 40 40 0 0 1 73.5 39.6" fill="none" stroke="#3ecf60" stroke-width="4" opacity="0.4"/>
+            <path d="M 73.5 39.6 A 40 40 0 0 1 82.8 49.1" fill="none" stroke="#e8d020" stroke-width="4" opacity="0.4"/>
+            <path d="M 82.8 49.1 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#e83020" stroke-width="4" opacity="0.4"/>
+            <!-- Tick marks -->
+            <line x1="11.4" y1="61.7" x2="17.5" y2="63.2" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="43.1" y1="32.6" x2="44.2" y2="38.5" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="73.5" y1="39.6" x2="70.0" y2="44.8" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="82.8" y1="49.1" x2="77.9" y2="52.8" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
+            <line x1="88.6" y1="61.7" x2="82.5" y2="63.2" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
+            <!-- Needle (pivots at 50,72; tip at 50,34 when rotation=0) -->
+            <line x1="50" y1="72" x2="50" y2="34" stroke="#e8e0d0" stroke-width="1.4" stroke-linecap="round">
+              <animateTransform attributeName="transform" type="rotate"
+                values="16 50 72; 24 50 72; 8 50 72; 27 50 72; 6 50 72; 19 50 72; 12 50 72; 22 50 72; 16 50 72"
+                keyTimes="0;0.12;0.28;0.45;0.58;0.70;0.82;0.92;1"
+                dur="3.2s" repeatCount="indefinite"
+                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+            </line>
+            <!-- Pivot -->
+            <circle cx="50" cy="72" r="3" fill="#e8820c"/>
+            <circle cx="50" cy="72" r="1.3" fill="#131109"/>
+            <!-- Labels -->
+            <text x="50" y="11" text-anchor="middle" fill="#5a5248" font-size="8" font-family="monospace" letter-spacing="3">L</text>
+            <text x="6" y="70" text-anchor="middle" fill="#2a2620" font-size="5.5" font-family="monospace">-20</text>
+            <text x="94" y="70" text-anchor="middle" fill="#e83020" font-size="5.5" font-family="monospace" opacity="0.6">+3</text>
+            <text x="50" y="57" text-anchor="middle" fill="#c8bfb0" font-size="9" font-family="monospace">-6.1</text>
+            <text x="50" y="67" text-anchor="middle" fill="#3a3020" font-size="5.5" font-family="monospace">dBVU</text>
+          </svg>
+          <!-- Right gauge -->
+          <svg viewBox="0 0 100 82" style="flex:1; overflow:visible;" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="vgD" cx="50%" cy="80%" r="68%">
+                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
+                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
+                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="100" height="82" rx="3" fill="#131109"/>
+            <rect width="100" height="82" rx="3" fill="url(#vgD)"/>
+            <path d="M 11.4 61.7 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#1a1610" stroke-width="4"/>
+            <path d="M 11.4 61.7 A 40 40 0 0 1 73.5 39.6" fill="none" stroke="#3ecf60" stroke-width="4" opacity="0.4"/>
+            <path d="M 73.5 39.6 A 40 40 0 0 1 82.8 49.1" fill="none" stroke="#e8d020" stroke-width="4" opacity="0.4"/>
+            <path d="M 82.8 49.1 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#e83020" stroke-width="4" opacity="0.4"/>
+            <line x1="11.4" y1="61.7" x2="17.5" y2="63.2" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="43.1" y1="32.6" x2="44.2" y2="38.5" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="73.5" y1="39.6" x2="70.0" y2="44.8" stroke="#2a2620" stroke-width="0.8"/>
+            <line x1="82.8" y1="49.1" x2="77.9" y2="52.8" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
+            <line x1="88.6" y1="61.7" x2="82.5" y2="63.2" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
+            <line x1="50" y1="72" x2="50" y2="34" stroke="#e8e0d0" stroke-width="1.4" stroke-linecap="round">
+              <animateTransform attributeName="transform" type="rotate"
+                values="14 50 72; 26 50 72; 10 50 72; 22 50 72; 5 50 72; 20 50 72; 15 50 72; 25 50 72; 14 50 72"
+                keyTimes="0;0.10;0.25;0.42;0.56;0.68;0.80;0.92;1"
+                dur="2.9s" repeatCount="indefinite"
+                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+            </line>
+            <circle cx="50" cy="72" r="3" fill="#e8820c"/>
+            <circle cx="50" cy="72" r="1.3" fill="#131109"/>
+            <text x="50" y="11" text-anchor="middle" fill="#5a5248" font-size="8" font-family="monospace" letter-spacing="3">R</text>
+            <text x="6" y="70" text-anchor="middle" fill="#2a2620" font-size="5.5" font-family="monospace">-20</text>
+            <text x="94" y="70" text-anchor="middle" fill="#e83020" font-size="5.5" font-family="monospace" opacity="0.6">+3</text>
+            <text x="50" y="57" text-anchor="middle" fill="#c8bfb0" font-size="9" font-family="monospace">-5.9</text>
+            <text x="50" y="67" text-anchor="middle" fill="#3a3020" font-size="5.5" font-family="monospace">dBVU</text>
+          </svg>
+        </div>
+        <!-- Meter type tabs -->
+        <div style="height:1px; background:var(--border);"></div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--amber); color:var(--black); font-weight:700; letter-spacing:0.08em;">ANALOG VU</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">SPECTRUM</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">LUFS</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">STEREO FIELD</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">PHASE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- SECTION 3: CLOUD SOURCES -->
+  <div class="feat-section">
+    <div>
+      <div class="section-tag">Cloud Sources</div>
+      <h2>Your Catalog,<br>Always <em>With You</em></h2>
+      <p class="section-desc">Browse and import tracks directly from Dropbox, Google Drive, or iCloud. Sync entire folders and let Signal Desk Pro automatically detect new tracks, updated versions, and deleted files.</p>
+    </div>
+    <div>
+      <div class="illus-panel">
+        <div class="illus-tag">Connect a Source</div>
+        <div style="font-family:'Barlow',sans-serif; font-size:13px; font-weight:300; color:var(--mid); line-height:1.5;">Link a cloud folder to start listening. You can add more later.</div>
+        <!-- Source rows -->
+        <div style="display:flex; flex-direction:column; gap:7px; flex:1; justify-content:center;">
+          <!-- Dropbox -->
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:var(--surface); border:1px solid var(--border); border-radius:3px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+              <path d="M12 6.5L6 10l6 3.5L6 17l-6-3.5L6 10 0 6.5 6 3l6 3.5z" fill="#0061FF" opacity="0.8"/>
+              <path d="M12 6.5L18 3l6 3.5-6 3.5L12 6.5zm0 7L6 17l6 3.5 6-3.5L12 13.5z" fill="#0061FF" opacity="0.5"/>
+            </svg>
+            <div style="flex:1;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--text); letter-spacing:0.06em;">Dropbox</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); margin-top:1px;">Browse your cloud library</div>
+            </div>
+            <div style="width:14px; height:14px; border-radius:50%; border:1px solid var(--border2);"></div>
+          </div>
+          <!-- Google Drive - connected -->
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:rgba(232,130,12,0.06); border:1px solid var(--amber-dim); border-radius:3px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+              <path d="M7.5 14L2 22h20L17 14H7.5z" fill="#FBBC04" opacity="0.8"/>
+              <path d="M12 2L7.5 14H17L12 2z" fill="#4285F4" opacity="0.8"/>
+              <path d="M2 22l5-8.6L12 2 7.5 14 2 22z" fill="#34A853" opacity="0.7"/>
+            </svg>
+            <div style="flex:1;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--amber); letter-spacing:0.06em;">Google Drive</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--amber); margin-top:1px; opacity:0.7;">Connected</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="7" fill="#e8820c"/>
+              <path d="M4 7l2 2 4-4" stroke="#080807" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <!-- iCloud -->
+          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:var(--surface); border:1px solid var(--border); border-radius:3px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+              <path d="M17.5 9.5C17.5 7 15.5 5 13 5c-1.9 0-3.5 1.1-4.3 2.7C7.9 7.3 7.0 7 6 7c-2.2 0-4 1.8-4 4s1.8 4 4 4h11.5c1.9 0 3.5-1.6 3.5-3.5s-1.6-2-3.5-2z" fill="#3478F6" opacity="0.7"/>
+            </svg>
+            <div style="flex:1;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--text); letter-spacing:0.06em;">iCloud Drive</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); margin-top:1px;">Browse your cloud library</div>
+            </div>
+            <div style="width:14px; height:14px; border-radius:50%; border:1px solid var(--border2);"></div>
+          </div>
+        </div>
+        <!-- CTA -->
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.12em; text-align:center; padding:13px; background:var(--amber); border-radius:3px; color:var(--black);">DOWNLOAD ON <span style="text-transform:none;">i</span>OS</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- CONSOLE MODES + METERS LIST -->
+  <div class="modes-section">
+    <div class="modes-inner">
+      <div>
+        <div class="section-tag">Console Modes</div>
+        <h2>Every<br><em>Mode</em></h2>
+        <div class="modes-list">
+          <div class="mode-item">Reference <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">L/R Flip <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">Mono <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">Dim <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">M/S Flip <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Bass Mono <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Width <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Pitch <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Time <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Car Sim <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Phone Sim <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Crossfeed <span class="mode-tier">PRO</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-tag">Meters</div>
+        <h2>Every<br><em>View</em></h2>
+        <div class="modes-list">
+          <div class="mode-item">Waveform <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">Digital VU <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">Analog VU <span class="mode-tier free">FREE</span></div>
+          <div class="mode-item">Spectrum Analyzer <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Loudness / LUFS <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Stereo Field <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Oscilloscope <span class="mode-tier">PRO</span></div>
+          <div class="mode-item">Phase Correlation <span class="mode-tier">PRO</span></div>
+        </div>
+
+        <div class="mini-vu" style="margin-top:32px;">
+          <div class="mini-vu-label">LEVEL MONITOR — LIVE</div>
+          <div class="mini-vu-bar" id="mini-vu-l"></div>
+          <div class="mini-vu-bar" id="mini-vu-r"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RENDER & SHARE -->
+  <div class="feat-section flip">
+    <div>
+      <div class="section-tag">Render &amp; Share</div>
+      <h2>Like What<br>You Hear?<br><em>Export It.</em></h2>
+      <p class="section-desc">Activate any console mode and tap the share icon to render a full-quality processed version of your track, with your settings baked in. Export as WAV, AIFF, or AAC and send it anywhere via AirDrop, Dropbox, or Messages.</p>
+    </div>
+    <div>
+      <div class="illus-panel">
+        <div class="illus-tag">Render &amp; Share</div>
+        <!-- Track being exported -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:11px 13px;">
+          <div style="font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:15px; color:var(--bright); letter-spacing:0.02em;">Late Bloom_v1.3</div>
+          <div style="display:flex; gap:8px; margin-top:5px; align-items:center;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--amber); border:1px solid var(--amber-dim); padding:2px 6px; border-radius:2px; letter-spacing:0.08em;">PITCH</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">mode active · processed</span>
+          </div>
+          <!-- Waveform -->
+          <div style="height:30px; margin-top:8px; overflow:hidden;">
+            <svg viewBox="0 0 200 30" preserveAspectRatio="none" width="100%" height="100%">
+              <defs>
+                <linearGradient id="wg" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stop-color="#e8820c" stop-opacity="0.3"/>
+                  <stop offset="45%" stop-color="#e8820c" stop-opacity="0.8"/>
+                  <stop offset="45%" stop-color="#e8820c" stop-opacity="0.8"/>
+                  <stop offset="100%" stop-color="#e8820c" stop-opacity="0.2"/>
+                </linearGradient>
+              </defs>
+              <polyline points="0,15 5,10 10,5 15,18 20,8 25,20 30,6 35,22 40,4 45,19 50,9 55,21 60,5 65,18 70,11 75,22 80,7 85,20 90,13 95,23 100,6 105,19 110,12 115,22 120,8 125,21 130,10 135,24 140,7 145,19 150,13 155,21 160,9 165,20 170,14 175,23 180,10 185,20 190,15 195,18 200,15" fill="none" stroke="url(#wg)" stroke-width="1.2"/>
+            </svg>
+          </div>
+        </div>
+        <!-- Format selector -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.18em; color:var(--muted); margin-bottom:7px;">EXPORT FORMAT</div>
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; padding:11px 6px; background:rgba(232,130,12,0.1); border:1px solid var(--amber-dim); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--amber);">WAV</div>
+            <div style="flex:1; padding:11px 6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--muted);">AIFF</div>
+            <div style="flex:1; padding:11px 6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--muted);">AAC</div>
+          </div>
+        </div>
+        <!-- Share via -->
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.18em; color:var(--muted); margin-bottom:7px;">SEND VIA</div>
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">AIRDROP</div>
+            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">DROPBOX</div>
+            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">MESSAGES</div>
+          </div>
+        </div>
+        <!-- Export button -->
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.12em; text-align:center; padding:13px; background:var(--amber); border-radius:3px; color:var(--black); margin-top:auto;">RENDER &amp; SHARE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- FREE VS PRO -->
+  <div class="pricing-section" id="pricing">
+    <div class="section-tag" style="text-align:center;">Free vs Pro</div>
+    <h2 style="text-align:center;">Unlock Every<br><em>Signal Path</em></h2>
+    <p class="section-desc" style="text-align:center; margin: 16px auto 0;">Device simulations, phase tools, stereo width control, and more. Everything you need to hear your mix the way your audience will.</p>
+
+    <table class="pricing-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Free</th>
+          <th class="pro-col">Pro</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Cloud sources (Dropbox, Google Drive, iCloud)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Library &amp; playlists</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Basic meters (Waveform, Digital VU, Analog VU)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Basic console modes (Reference, L/R Flip, Mono, Dim)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Render &amp; Share</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Pro console modes (M/S Flip, Bass Mono, Width, Pitch, Time, Car Sim, Phone Sim, Crossfeed)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
+        <tr><td>Pro meters (Spectrum, LUFS, Stereo Field, Oscilloscope, Phase Correlation)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
+      </tbody>
+    </table>
+
+    <!-- Pricing tiers -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:40px;">
+      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">FREE</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$0</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">forever</div>
+      </div>
+      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">MONTHLY</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$4.99</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">/month</div>
+      </div>
+      <div style="background:rgba(232,130,12,0.08); border:2px solid var(--amber); border-radius:4px; padding:24px; text-align:center; position:relative;">
+        <div style="position:absolute; top:-11px; left:50%; transform:translateX(-50%); background:var(--amber); color:var(--black); font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 10px; border-radius:2px;">BEST VALUE</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--amber); margin-bottom:12px;">ANNUAL</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$29.99</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--amber); margin-top:6px;">$2.50/mo</div>
+      </div>
+      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">LIFETIME</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$59.99</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">one time</div>
+      </div>
+    </div>
+    <p style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); text-align:center; margin-top:16px; letter-spacing:0.08em;">Cancel anytime. Restore purchases available in Settings.</p>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- CTA -->
+  <div class="cta-section" id="download">
+    <div class="cta-inner">
+      <div class="cta-pre">Available on iOS</div>
+      <div class="cta-title">Mix Translation.<br>In Your<br><em style="font-style:italic; color:var(--amber);">Pocket.</em></div>
+      <p class="cta-sub">Download Signal Desk Pro and start hearing your mixes the way the world will.</p>
+      <div class="cta-buttons">
+        <a href="#" class="btn-primary">Download on the App Store</a>
+      </div>
+      <div class="platform-note">iOS 16 or later · Free to download · Pro unlocks everything</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo" style="line-height:1.5;">
+      <div>Mix Translation. In Your Pocket.</div>
+      <div style="font-size:11px; margin-top:2px;">Signal Desk <span>Pro</span></div>
+    </div>
+    <div class="footer-links">
+      <a href="#">signaldeskpro.com</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="mailto:hello@signaldeskpro.com">Contact</a>
+      <a href="mailto:feedback@signaldeskpro.com">Feedback</a>
+    </div>
+    <div class="footer-copy">© Signal Desk Pro</div>
+  </footer>
+
+  <!-- VU METER ANIMATION -->
+  <script>
+    // ── VU segment colors by position (38 segments per channel)
+    const TOTAL_SEGS = 38;
+    const segColor = (i) => {
+      if (i < 24) return '#3ecf60'; // green  -40 to -10
+      if (i < 30) return '#8ecf20'; // ygreen -10 to -6
+      if (i < 33) return '#e8d020'; // yellow  -6 to -3
+      if (i < 36) return '#e88020'; // orange  -3 to  0
+      return '#e83020';             // red      0 to +3
+    };
+
+    function buildBar(el) {
+      el.innerHTML = '';
+      for (let i = 0; i < TOTAL_SEGS; i++) {
+        const s = document.createElement('div');
+        s.className = 'vu-segment';
+        s.style.background = 'var(--vu-off)';
+        el.appendChild(s);
+      }
+    }
+
+    function buildMiniBar(el) {
+      el.innerHTML = '';
+      for (let i = 0; i < TOTAL_SEGS; i++) {
+        const s = document.createElement('div');
+        s.className = 'mini-vu-seg';
+        s.style.background = 'var(--vu-off)';
+        s.style.flex = '1';
+        s.style.borderRadius = '1px';
+        el.appendChild(s);
+      }
+    }
+
+    function setLevel(el, level) {
+      // level: 0.0 – 1.0 where 1.0 = clipping (+3dB)
+      const segs = el.children;
+      const lit = Math.floor(level * TOTAL_SEGS);
+      for (let i = 0; i < TOTAL_SEGS; i++) {
+        segs[i].style.background = i < lit ? segColor(i) : 'var(--vu-off)';
+        segs[i].style.boxShadow = i < lit && i === lit - 1
+          ? `0 0 4px ${segColor(i)}88` : 'none';
+      }
+    }
+
+    // Build bars
+    const vuL = document.getElementById('vu-left');
+    const vuR = document.getElementById('vu-right');
+    const miniL  = document.getElementById('mini-vu-l');
+    const miniR  = document.getElementById('mini-vu-r');
+    const mockB1 = document.getElementById('mock-bar-1');
+    const mockB2 = document.getElementById('mock-bar-2');
+    if (vuL) buildBar(vuL);
+    if (vuR) buildBar(vuR);
+    buildMiniBar(miniL); buildMiniBar(miniR);
+    if (mockB1) buildMiniBar(mockB1);
+    if (mockB2) buildMiniBar(mockB2);
+
+    // Simulate audio playback movement
+    let tL = 0, tR = Math.PI * 0.7;
+    let peakL = 0, peakR = 0;
+    let decayL = 0, decayR = 0;
+
+    function animVU() {
+      tL += 0.04 + Math.random() * 0.02;
+      tR += 0.035 + Math.random() * 0.025;
+
+      // Generate signal with musical variation
+      const baseL = 0.55 + 0.22 * Math.sin(tL * 0.8) + 0.12 * Math.sin(tL * 2.1) + 0.08 * Math.sin(tL * 5.3);
+      const baseR = 0.53 + 0.24 * Math.sin(tR * 0.75) + 0.10 * Math.sin(tR * 1.9) + 0.09 * Math.sin(tR * 4.7);
+
+      // Random transients
+      const transL = Math.random() < 0.04 ? 0.15 * Math.random() : 0;
+      const transR = Math.random() < 0.04 ? 0.15 * Math.random() : 0;
+
+      const lL = Math.min(1, Math.max(0, baseL + transL));
+      const lR = Math.min(1, Math.max(0, baseR + transR));
+
+      if (vuL) setLevel(vuL, lL);
+      if (vuR) setLevel(vuR, lR);
+      setLevel(miniL, lL);
+      setLevel(miniR, lR);
+      if (mockB1) setLevel(mockB1, lL);
+      if (mockB2) setLevel(mockB2, lR);
+
+      requestAnimationFrame(animVU);
+    }
+    animVU();
+
+    // Feature button toggle (demo)
+    document.querySelectorAll('.feat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.feat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
