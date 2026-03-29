@@ -1347,6 +1347,9 @@
       border: 1px solid #2a2218;
       color: var(--muted);
       box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s, color 0.12s, box-shadow 0.12s;
     }
 
     .illus-btn svg {
@@ -1856,8 +1859,8 @@
         </div>
         <!-- Active mode display -->
         <div style="text-align:center; padding:0;">
-          <div style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:27px; letter-spacing:0.06em; color:var(--amber); text-shadow:0 0 40px rgba(232,130,12,0.4); line-height:1; text-transform:uppercase;">CAR SIM</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.14em; color:var(--muted); margin-top:4px;">ACTIVE · TAP TO BYPASS</div>
+          <div id="console-mode-name" style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:27px; letter-spacing:0.06em; color:var(--amber); text-shadow:0 0 40px rgba(232,130,12,0.4); line-height:1; text-transform:uppercase;">CAR SIM</div>
+          <div id="console-mode-status" style="font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.14em; color:var(--muted); margin-top:4px;">ACTIVE · TAP TO BYPASS</div>
         </div>
         <!-- Before / After waveforms -->
         <div style="display:grid; grid-template-columns:1fr 14px 1fr; gap:6px; align-items:end;">
@@ -1885,7 +1888,7 @@
         <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:3px;">
 
           <!-- REF -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="REFERENCE">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1,8 Q4,2 7.5,8 Q11,14 15,8"/>
             </svg>
@@ -1893,7 +1896,7 @@
           </div>
 
           <!-- L/R -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="L/R FLIP">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <line x1="2" y1="5.5" x2="12" y2="5.5"/>
               <polyline points="10,3.5 12,5.5 10,7.5"/>
@@ -1904,7 +1907,7 @@
           </div>
 
           <!-- MONO -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="MONO">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
               <circle cx="8" cy="8" r="4.5"/>
               <circle cx="8" cy="8" r="1.8" fill="currentColor" stroke="none"/>
@@ -1913,7 +1916,7 @@
           </div>
 
           <!-- DIM -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="DIM">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <line x1="8" y1="3" x2="8" y2="11"/>
               <polyline points="5.5,8.5 8,11 10.5,8.5"/>
@@ -1923,7 +1926,7 @@
           </div>
 
           <!-- M/S -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="M/S FLIP">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
               <rect x="5.5" y="3" width="5" height="10" rx="0.8" fill="currentColor" stroke="none" opacity="0.65"/>
               <rect x="1" y="5.5" width="3.5" height="5" rx="0.8"/>
@@ -1933,7 +1936,7 @@
           </div>
 
           <!-- BASS M -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="BASS MONO">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
               <path d="M1,11 Q4.5,3 8,11 Q11.5,3 15,11"/>
               <circle cx="8" cy="5" r="1.5" fill="currentColor" stroke="none"/>
@@ -1942,7 +1945,7 @@
           </div>
 
           <!-- WIDTH -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="WIDTH">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <line x1="1" y1="8" x2="5" y2="8"/>
               <polyline points="3,6 1,8 3,10"/>
@@ -1954,7 +1957,7 @@
           </div>
 
           <!-- PITCH -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="PITCH">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <line x1="8" y1="13" x2="8" y2="4"/>
               <polyline points="5.5,6.5 8,4 10.5,6.5"/>
@@ -1964,7 +1967,7 @@
           </div>
 
           <!-- TIME -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="TIME">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
               <circle cx="8" cy="8.5" r="5.5"/>
               <line x1="8" y1="8.5" x2="8" y2="5"/>
@@ -1974,7 +1977,7 @@
           </div>
 
           <!-- CAR SIM (active) -->
-          <div class="illus-btn on">
+          <div class="illus-btn on" data-mode="CAR SIM">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1.5,10 L1.5,8 L4.5,5.5 L11.5,5.5 L14.5,8 L14.5,10"/>
               <line x1="1.5" y1="10" x2="3" y2="10"/>
@@ -1988,7 +1991,7 @@
           </div>
 
           <!-- PHONE -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="PHONE SIM">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5.5,2.5 L7,2.5 L7.5,5.5 L6,6.5 C7,8 8,9 9.5,9.5 L10.5,8 L13.5,8.5 L13.5,10 C10.5,13.5 3.5,9 3.5,5.5 Z"/>
             </svg>
@@ -1996,7 +1999,7 @@
           </div>
 
           <!-- XFEED -->
-          <div class="illus-btn">
+          <div class="illus-btn" data-mode="CROSSFEED">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3,11.5 L3,9 C3,6 5,4 8,4 C11,4 13,6 13,9 L13,11.5"/>
               <rect x="1.5" y="10.5" width="3" height="4" rx="1"/>
@@ -2462,6 +2465,35 @@
         btn.classList.add('active');
       });
     });
+
+    // Console mode buttons — interactive illustration
+    (function() {
+      const buttons = document.querySelectorAll('#console .illus-btn[data-mode]');
+      const nameEl = document.getElementById('console-mode-name');
+      const statusEl = document.getElementById('console-mode-status');
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const isOn = btn.classList.contains('on');
+          // Deactivate all
+          buttons.forEach(b => b.classList.remove('on'));
+          if (isOn) {
+            // Toggle off — show bypassed state
+            nameEl.textContent = btn.dataset.mode;
+            statusEl.textContent = 'BYPASSED · TAP TO ENGAGE';
+            nameEl.style.color = 'var(--muted)';
+            nameEl.style.textShadow = 'none';
+          } else {
+            // Activate clicked button
+            btn.classList.add('on');
+            nameEl.textContent = btn.dataset.mode;
+            statusEl.textContent = 'ACTIVE · TAP TO BYPASS';
+            nameEl.style.color = 'var(--amber)';
+            nameEl.style.textShadow = '0 0 40px rgba(232,130,12,0.4)';
+          }
+        });
+      });
+    })();
   </script>
 </body>
 </html>
