@@ -963,6 +963,9 @@
     .vu-display { animation: fade-up 0.7s 0.3s ease both; }
     .hero-stats { animation: fade-up 0.6s 0.45s ease both; }
 
+    /* ─── FEATURE CAROUSEL WRAPPER ─── */
+    .feat-carousel { display: block; }
+
     /* ─── FEATURE SECTIONS (2-col) ─── */
     .feat-section {
       max-width: 1100px;
@@ -1378,19 +1381,32 @@
     /* ─── MOBILE ─── */
     @media (max-width: 767px) {
 
+      /* Prevent any element causing horizontal page scroll */
+      html { overflow-x: hidden; }
+      body { overflow-x: hidden; max-width: 100vw; }
+
       /* Header */
-      header {
-        padding: 0 20px;
-      }
+      header { padding: 0 20px; }
       nav a:not(.nav-cta) { display: none; }
       .nav-cta { font-size: 9px; padding: 6px 12px; }
 
       /* Hero */
-      .hero { padding: 88px 24px 56px; }
+      .hero { padding: 88px 20px 56px; }
       h1 { font-size: clamp(42px, 12vw, 72px); }
       .hero-sub { font-size: 15px; }
-      .vu-display { margin-bottom: 32px; }
-      .vu-display::before { font-size: 7px; letter-spacing: 0.1em; white-space: normal; text-align: center; }
+      .vu-display {
+        margin-bottom: 32px;
+        overflow: hidden;
+      }
+      .vu-display::before {
+        font-size: 7px;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: block;
+      }
       .hero-stats { gap: 20px; flex-wrap: wrap; justify-content: center; }
       .stat-divider { display: none; }
       .stat { min-width: 80px; text-align: center; }
@@ -1402,7 +1418,7 @@
       /* Features grid — horizontal scroll carousel */
       .features-section { padding: 60px 0; }
       .features-section > h2,
-      .features-section > p { padding: 0 24px; }
+      .features-section > p { padding: 0 20px; }
       .features-grid {
         display: flex;
         overflow-x: auto;
@@ -1410,60 +1426,114 @@
         -webkit-overflow-scrolling: touch;
         gap: 0;
         background: transparent;
-        padding: 2px 24px 16px;
+        padding: 2px 20px 16px;
         scrollbar-width: none;
       }
       .features-grid::-webkit-scrollbar { display: none; }
       .feature-card {
-        min-width: 72vw;
+        flex: 0 0 82vw;
+        width: 82vw;
+        max-width: 82vw;
+        box-sizing: border-box;
         scroll-snap-align: start;
-        flex-shrink: 0;
         border: 1px solid var(--border);
         margin-right: 2px;
+        overflow: hidden;
+      }
+      .feature-desc {
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
 
       /* Section divider */
       .section-divider { margin: 0; }
+      .feat-carousel__divider { display: none; }
 
-      /* Feature sections — single column */
-      .feat-section {
+      /* Feature carousel — horizontal snap scroll */
+      .feat-carousel {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .feat-carousel::-webkit-scrollbar { display: none; }
+
+      /* Each slide — locked to viewport width */
+      .feat-carousel .feat-section,
+      .feat-carousel .modes-section {
+        flex: 0 0 100vw;
+        width: 100vw;
+        max-width: 100vw;
+        min-width: 0;
+        scroll-snap-align: start;
+        box-sizing: border-box;
+        padding: 56px 20px;
+        overflow: hidden;
+      }
+
+      /* Single column layout inside each slide */
+      .feat-carousel .feat-section {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 36px;
+        margin: 0;
+      }
+      .feat-carousel .feat-section.flip { direction: ltr; }
+
+      /* Force all children to respect slide width and wrap text */
+      .feat-carousel .feat-section > *,
+      .feat-carousel .modes-inner > * {
+        min-width: 0;
+        max-width: 100%;
+      }
+      .feat-carousel p,
+      .feat-carousel h2,
+      .feat-carousel .section-desc {
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        max-width: 100%;
+      }
+
+      /* Modes section inside carousel */
+      .feat-carousel .modes-section {
+        background: var(--panel);
+        border-top: none;
+        border-bottom: none;
+      }
+      .feat-carousel .modes-inner {
         grid-template-columns: 1fr;
         gap: 40px;
-        padding: 60px 24px;
       }
-      .feat-section.flip { direction: ltr; }
 
-      /* Illustration panels — full width */
+      /* Illustration panels — full width, no fixed height */
       .illus-panel {
         max-width: 100%;
+        width: 100%;
         aspect-ratio: auto;
         height: auto;
-      }
-
-      /* Modes / meters section */
-      .modes-section { padding: 60px 24px; }
-      .modes-inner {
-        grid-template-columns: 1fr;
-        gap: 48px;
+        box-sizing: border-box;
       }
 
       /* Pricing */
-      .pricing-section { padding: 60px 24px; }
+      .pricing-section { padding: 56px 20px; overflow: hidden; }
       .pricing-table-wrap {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        margin: 0 -24px;
-        padding: 0 24px;
+        margin: 0 -20px;
+        padding: 0 20px;
       }
-      .pricing-table { min-width: 560px; }
-      .pricing-plans {
-        flex-direction: column;
-        align-items: stretch;
+      .pricing-table { min-width: 520px; }
+      /* Pricing tier cards — 2×2 grid */
+      .pricing-tiers {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
       }
-      .plan-card { min-width: unset; }
 
       /* CTA */
-      .cta-section { padding: 80px 24px; }
+      .cta-section { padding: 80px 20px; }
       .cta-title { font-size: clamp(40px, 12vw, 80px); }
       .cta-buttons { flex-direction: column; align-items: stretch; }
       .btn-primary, .btn-secondary { text-align: center; }
@@ -1473,7 +1543,7 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 20px;
-        padding: 32px 24px;
+        padding: 32px 20px;
       }
       .footer-links { flex-wrap: wrap; gap: 16px 24px; }
     }
@@ -1753,7 +1823,9 @@
     </div>
   </section>
 
-  <div class="section-divider"></div>
+  <div class="feat-carousel">
+
+  <div class="section-divider feat-carousel__divider"></div>
 
   <!-- SECTION 1: CONSOLE MODES -->
   <div class="feat-section" id="console">
@@ -1927,7 +1999,7 @@
     </div>
   </div>
 
-  <div class="section-divider"></div>
+  <div class="section-divider feat-carousel__divider"></div>
 
   <!-- SECTION 2: METERS -->
   <div class="feat-section flip" id="meters">
@@ -2030,7 +2102,7 @@
     </div>
   </div>
 
-  <div class="section-divider"></div>
+  <div class="section-divider feat-carousel__divider"></div>
 
   <!-- SECTION 3: CLOUD SOURCES -->
   <div class="feat-section">
@@ -2091,7 +2163,7 @@
     </div>
   </div>
 
-  <div class="section-divider"></div>
+  <div class="section-divider feat-carousel__divider"></div>
 
   <!-- CONSOLE MODES + METERS LIST -->
   <div class="modes-section">
@@ -2193,6 +2265,8 @@
     </div>
   </div>
 
+  </div><!-- /feat-carousel -->
+
   <div class="section-divider"></div>
 
   <!-- FREE VS PRO -->
@@ -2223,7 +2297,7 @@
     </div>
 
     <!-- Pricing tiers -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:40px;">
+    <div class="pricing-tiers" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:40px;">
       <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
         <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">FREE</div>
         <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$0</div>
