@@ -1374,6 +1374,109 @@
     ::-webkit-scrollbar-track { background: var(--black); }
     ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 767px) {
+
+      /* Header */
+      header {
+        padding: 0 20px;
+      }
+      nav a:not(.nav-cta) { display: none; }
+      .nav-cta { font-size: 9px; padding: 6px 12px; }
+
+      /* Hero */
+      .hero { padding: 88px 24px 56px; }
+      h1 { font-size: clamp(42px, 12vw, 72px); }
+      .hero-sub { font-size: 15px; }
+      .vu-display { margin-bottom: 32px; }
+      .vu-display::before { font-size: 7px; letter-spacing: 0.1em; white-space: normal; text-align: center; }
+      .hero-stats { gap: 20px; flex-wrap: wrap; justify-content: center; }
+      .stat-divider { display: none; }
+      .stat { min-width: 80px; text-align: center; }
+
+      /* Track info / playback */
+      .track-info { flex-direction: column; gap: 12px; }
+      .playback-controls { gap: 16px; }
+
+      /* Features grid — horizontal scroll carousel */
+      .features-section { padding: 60px 0; }
+      .features-section > h2,
+      .features-section > p { padding: 0 24px; }
+      .features-grid {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        gap: 0;
+        background: transparent;
+        padding: 2px 24px 16px;
+        scrollbar-width: none;
+      }
+      .features-grid::-webkit-scrollbar { display: none; }
+      .feature-card {
+        min-width: 72vw;
+        scroll-snap-align: start;
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+        margin-right: 2px;
+      }
+
+      /* Section divider */
+      .section-divider { margin: 0; }
+
+      /* Feature sections — single column */
+      .feat-section {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        padding: 60px 24px;
+      }
+      .feat-section.flip { direction: ltr; }
+
+      /* Illustration panels — full width */
+      .illus-panel {
+        max-width: 100%;
+        aspect-ratio: auto;
+        height: auto;
+      }
+
+      /* Modes / meters section */
+      .modes-section { padding: 60px 24px; }
+      .modes-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      /* Pricing */
+      .pricing-section { padding: 60px 24px; }
+      .pricing-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -24px;
+        padding: 0 24px;
+      }
+      .pricing-table { min-width: 560px; }
+      .pricing-plans {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .plan-card { min-width: unset; }
+
+      /* CTA */
+      .cta-section { padding: 80px 24px; }
+      .cta-title { font-size: clamp(40px, 12vw, 80px); }
+      .cta-buttons { flex-direction: column; align-items: stretch; }
+      .btn-primary, .btn-secondary { text-align: center; }
+
+      /* Footer */
+      footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+        padding: 32px 24px;
+      }
+      .footer-links { flex-wrap: wrap; gap: 16px 24px; }
+    }
   </style>
 </head>
 <body>
@@ -2098,6 +2201,7 @@
     <h2 style="text-align:center;">Unlock Every<br><em>Signal Path</em></h2>
     <p class="section-desc" style="text-align:center; margin: 16px auto 0;">Device simulations, phase tools, stereo width control, and more. Everything you need to hear your mix the way your audience will.</p>
 
+    <div class="pricing-table-wrap">
     <table class="pricing-table">
       <thead>
         <tr>
@@ -2116,6 +2220,7 @@
         <tr><td>Pro meters (Spectrum, LUFS, Stereo Field, Oscilloscope, Phase Correlation)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
       </tbody>
     </table>
+    </div>
 
     <!-- Pricing tiers -->
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:40px;">
