@@ -52,6 +52,9 @@
           var builder = new google.picker.PickerBuilder()
             .setOAuthToken(opts.token)
             .setAppId(String(opts.appId || ''))
+            // Required when the picker is embedded (WKWebView included); without it
+            // Google's frame answers with a bare 403 page.
+            .setOrigin(window.location.protocol + '//' + window.location.host)
             .setTitle('Choose tracks to import')
             .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
             .enableFeature(google.picker.Feature.NAV_HIDDEN)
