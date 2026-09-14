@@ -257,100 +257,100 @@
   <main>
     <div class="page-eyebrow">Legal</div>
     <h1>Privacy<br>Policy</h1>
-    <div class="page-date">Effective date: March 27, 2026 &nbsp;·&nbsp; Signal Desk Pro</div>
+    <div class="page-date">Effective date: September 14, 2026 &nbsp;·&nbsp; Signal Desk Pro</div>
 
     <div class="summary-box">
-      <p>The short version: Signal Desk Pro does not require you to create an account. We do not collect, sell, or share your personal data. The only information we may collect is your email address if you choose to sign up for updates, and we will never sell or share that either.</p>
-      <p>This policy explains what we collect, why, and how you can control it.</p>
+      <p>The short version: Signal Desk Pro has no accounts. Your audio library lives on your iPhone, not on our servers. The only personal information we ever hold is your email address, and only if you choose to give it to us for product updates.</p>
+      <p>This policy explains what the app touches, who processes it, and how you can control it.</p>
     </div>
 
     <section>
       <h2>Who We Are</h2>
-      <p>Signal Desk Pro is an iOS application for professional audio playback and mix translation. References to "we," "us," or "our" in this policy refer to the developer of Signal Desk Pro.</p>
-      <p>If you have any questions about this policy, contact us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a>.</p>
+      <p>Signal Desk Pro is an iOS app published by Silverplatter Audio. "We," "us," and "our" mean Silverplatter Audio.</p>
+      <p>Questions about this policy: <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a>.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
-      <h2>What We Do Not Collect</h2>
-      <p>Signal Desk Pro does not require you to create an account. Because of this, we do not collect, store, or process:</p>
+      <h2>What We Collect</h2>
+      <p>One thing, and only if you opt in: your email address, entered in Settings to receive product updates. We use it for nothing else. We do not collect your name, contacts, location, or usage analytics, and the app contains no analytics or crash-reporting SDK.</p>
+      <p>Everything else the app handles (your audio files, cover images, playlists, settings) stays on your device. Nothing is uploaded to Silverplatter Audio servers.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Where Your Library Lives</h2>
+      <p>Audio you sync or import, along with any cover images, is downloaded and stored in the app's private storage on your iPhone. That is by design: the app plays from local files. We never receive a copy.</p>
+      <p>Track title, artist, and artwork for the current song are handed to iOS so they can appear on the lock screen, in Control Center, and on CarPlay.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Cloud Sources</h2>
+      <p>You can add music from three places. Each works differently, and none gives us access to your account.</p>
       <ul>
-        <li>Your name, address, phone number, or any other identifying information</li>
-        <li>Your audio files, mixes, or any content you play or import in the app</li>
-        <li>Usage analytics, behavioral data, or in-app activity</li>
-        <li>Device identifiers used for tracking or advertising</li>
-        <li>Payment or billing information (all purchases are processed by Apple through the App Store)</li>
+        <li>Dropbox: Signal Desk Pro is a Dropbox "App folder" app. On connect, Dropbox creates "Apps/Signal Desk Pro" in your Dropbox, and that folder is the only thing the app can see. Everything inside it (audio and cover images) syncs to your device automatically. Sign-in is handled by Dropbox. The sign-in code exchange passes through a Cloudflare Worker operated by Silverplatter Audio, which forwards it to Dropbox and returns your tokens to the app without storing them. Tokens are kept in the iOS Keychain on your device.</li>
+        <li>Google Drive: import only, through Google's own file picker. The app uses the "drive.file" scope, so it can access only the files you explicitly pick, never your Drive as a whole. Sign-in is handled by Google. There is no folder browsing and no automatic sync.</li>
+        <li>Local files: the standard iOS document picker. Files you choose are copied into the app's storage.</li>
       </ul>
-      <p>We do not sell, rent, trade, or otherwise share your personal data with any third party, for any reason, at any time.</p>
+      <p>Your use of Dropbox and Google Drive is also governed by their own privacy policies.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
-      <h2>What We Do Collect</h2>
-      <p>The only personal information we collect is your email address, and only if you voluntarily provide it, for example by signing up for product updates or news about Signal Desk Pro.</p>
-      <p>We use your email address solely for:</p>
+      <h2>Purchases</h2>
+      <p>The Professional tier (monthly, annual, or lifetime) is sold through Apple In-App Purchase. Apple handles billing; we never see your payment details. Entitlements are processed by RevenueCat, a third-party subscription platform, which receives an anonymous app-user ID and your purchase and entitlement history. It receives no name or email.</p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section>
+      <h2>Who Processes Data</h2>
+      <p>We do not sell or rent personal data. These services process data on our behalf or as part of features you use:</p>
       <ul>
-        <li>Sending product updates, release notes, and new feature announcements</li>
-        <li>Occasional marketing communications about Signal Desk Pro</li>
+        <li>Apple: App Store distribution and In-App Purchase billing</li>
+        <li>RevenueCat: subscription entitlements (anonymous ID and purchase history)</li>
+        <li>Cloudflare Worker (operated by us): relays the Dropbox sign-in code exchange and receives your email if you sign up; stores neither</li>
+        <li>Resend: email provider that stores the update-list audience and sends our emails</li>
+        <li>Dropbox and Google: your own cloud storage, under their policies</li>
       </ul>
-      <p>We will never sell your email address. We will never share it with third parties for their own marketing purposes. You can unsubscribe from any email we send at any time using the unsubscribe link included in every message.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
-      <h2>Cloud Storage Integrations</h2>
-      <p>Signal Desk Pro can connect to third-party cloud storage services including Dropbox, Google Drive, and iCloud to allow you to browse and import your audio files. When you connect a cloud source:</p>
+      <h2>Retention and Deletion</h2>
       <ul>
-        <li>Authentication is handled directly by the respective service (Dropbox, Google, Apple) using their own OAuth or sign-in flows</li>
-        <li>We do not receive, store, or have access to your cloud storage credentials or passwords</li>
-        <li>We do not upload, copy, or retain any files from your cloud storage</li>
-        <li>File access is used solely to stream or import audio files you select within the app</li>
+        <li>Cloud sources: disconnecting a source in Settings revokes its tokens on your device</li>
+        <li>Your library: deleting the app deletes all downloaded audio, images, and settings from your device</li>
+        <li>Email: every message has an unsubscribe link, and Settings has a "Remove email" option that unsubscribes you in Resend. That is an opt-out, not erasure. To have your address deleted entirely, email <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a></li>
       </ul>
-      <p>Your use of Dropbox, Google Drive, or iCloud is subject to those services' own privacy policies. We encourage you to review them separately.</p>
-    </section>
-
-    <div class="section-divider"></div>
-
-    <section>
-      <h2>In-App Purchases</h2>
-      <p>Signal Desk Pro offers optional paid subscriptions and a one-time lifetime purchase through Apple's In-App Purchase system. All billing is handled entirely by Apple. We do not receive or store any payment card information. Apple's privacy policy governs how your payment data is handled.</p>
-    </section>
-
-    <div class="section-divider"></div>
-
-    <section>
-      <h2>Your Rights</h2>
-      <p>If you have provided us with your email address and would like to:</p>
-      <ul>
-        <li>Unsubscribe from marketing emails: use the unsubscribe link in any email, or contact us directly</li>
-        <li>Request deletion of your email from our records: email us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a> and we will remove it promptly</li>
-        <li>Ask what information we hold about you: contact us and we will tell you</li>
-      </ul>
-      <p>Because we do not collect personal data beyond email addresses, there is no account to delete and no profile data to export.</p>
+      <p>Because there is no account, there is no profile to delete or export. You can ask us at any time what we hold about you; for most people the answer is nothing, or one email address.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
       <h2>Children's Privacy</h2>
-      <p>Signal Desk Pro is not directed at children under the age of 13. We do not knowingly collect any personal information from children. If you believe a child has provided us with their email address, contact us at <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a> and we will delete it immediately.</p>
+      <p>Signal Desk Pro is not directed at children under 13, and we do not knowingly collect personal information from them. If you believe a child has given us an email address, contact <a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a> and we will delete it.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
       <h2>Changes to This Policy</h2>
-      <p>We may update this privacy policy from time to time. When we do, we will update the effective date at the top of this page. We encourage you to review this policy periodically. Continued use of Signal Desk Pro after any changes constitutes your acceptance of the updated policy.</p>
+      <p>If this policy changes, we will update the effective date at the top of this page. Continued use of Signal Desk Pro after a change means you accept the updated policy.</p>
     </section>
 
     <div class="section-divider"></div>
 
     <section>
       <h2>Contact</h2>
-      <p>Questions or concerns about this privacy policy? Reach us at:</p>
+      <p>Silverplatter Audio</p>
       <ul>
         <li><a href="mailto:hello@signaldeskpro.com">hello@signaldeskpro.com</a></li>
       </ul>
