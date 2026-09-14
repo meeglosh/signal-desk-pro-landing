@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Import from Google Drive · Signal Desk Pro</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #141618; color: #D4D0CA; font-family: -apple-system, system-ui, sans-serif; }
+    #status { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; font-size: 15px; line-height: 1.5; color: #706C64; }
+    #status b { color: #D4D0CA; font-weight: 600; }
+    .picker-dialog-bg, .picker-dialog { z-index: 2000 !important; }
+  </style>
+</head>
+<body>
+  <div id="status">Loading Google Drive…</div>
+  <script>
+    // Signal Desk Pro — Google Drive picker host page.
+    // Loaded inside the app's WebView. The app calls window.__sdPicker.open({token, appId, apiKey})
+    // after load; results are posted back with window.ReactNativeWebView.postMessage.
+    // Nothing here stores data; the OAuth token only lives in memory for the picker session.
+    (function () {
+      var AUDIO_MIMES = 'audio/mpeg,audio/mp3,audio/aac,audio/mp4,audio/x-m4a,audio/m4a,audio/flac,audio/x-flac,audio/wav,audio/x-wav,audio/wave,audio/aiff,audio/x-aiff,audio/aif,application/octet-stream';
+      var statusEl = document.getElementById('status');
+      var pickerLoaded = false;
+      var pending = null;
+
+      function post(msg) {
+        try {
+          if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify(msg)); }
+          else { console.log('[picker]', msg); }
+        } catch (e) {}
+      }
+      function setStatus(html) { statusEl.innerHTML = html; statusEl.style.display = 'flex'; }
+      function fail(message) { setStatus('<span><b>Couldn’t open Google Drive.</b><br>' + message + '</span>'); post({ type: 'error', message: String(message) }); }
+
+      function onApiLoad() {
+        try {
+          gapi.load('picker', { callback: function () { pickerLoaded = true; post({ type: 'ready' }); if (pending) { var p = pending; pending = null; open(p); } } });
+        } catch (e) { fail(e && e.message ? e.message : e); }
+      }
+      window.__sdOnApiLoad = onApiLoad;
+
+      function open(opts) {
+        if (!pickerLoaded) { pending = opts; return; }
+        if (!opts || !opts.token) { fail('Missing sign-in token.'); return; }
+        try {
+          var view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+            .setIncludeFolders(true)
+            .setMimeTypes(AUDIO_MIMES)
+            .setMode(google.picker.DocsViewMode.LIST);
+          var builder = new google.picker.PickerBuilder()
+            .setOAuthToken(opts.token)
+            .setAppId(String(opts.appId || ''))
+            .setTitle('Choose tracks to import')
+            .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+            .enableFeature(google.picker.Feature.NAV_HIDDEN)
+            .setSize(window.innerWidth, window.innerHeight)
+            .addView(view)
+            .setCallback(function (data) {
+              var action = data[google.picker.Response.ACTION];
+              if (action === google.picker.Action.PICKED) {
+                var docs = data[google.picker.Response.DOCUMENTS] || [];
+                var files = [];
+                for (var i = 0; i < docs.length; i++) {
+                  var d = docs[i];
+                  files.push({ id: d[google.picker.Document.ID], name: d[google.picker.Document.NAME], mimeType: d[google.picker.Document.MIME_TYPE] || '', sizeBytes: d.sizeBytes || 0 });
+                }
+                setStatus('<span>Importing <b>' + files.length + '</b> track' + (files.length === 1 ? '' : 's') + '…</span>');
+                post({ type: 'picked', files: files });
+              } else if (action === google.picker.Action.CANCEL) {
+                post({ type: 'cancelled' });
+              }
+            });
+          if (opts.apiKey) { builder.setDeveloperKey(opts.apiKey); }
+          statusEl.style.display = 'none';
+          builder.build().setVisible(true);
+        } catch (e) { fail(e && e.message ? e.message : e); }
+      }
+
+      window.__sdPicker = { open: open };
+      window.addEventListener('error', function (ev) { fail(ev && ev.message ? ev.message : 'script error'); });
+    })();
+  </script>
+  <script async defer src="https://apis.google.com/js/api.js?onload=__sdOnApiLoad" onerror="document.getElementById('status').innerHTML='<span><b>Couldn’t reach Google.</b><br>Check your connection and try again.</span>'"></script>
+</body>
+</html>
