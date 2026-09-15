@@ -20,6 +20,14 @@
     // after load; results are posted back with window.ReactNativeWebView.postMessage.
     // Nothing here stores data; the OAuth token only lives in memory for the picker session.
     (function () {
+      // Browser API key for the Google Picker (setDeveloperKey). It lives here
+      // rather than in the app so it can be rotated without shipping an App
+      // Store update. It is not a secret: browser keys are visible to anyone
+      // who loads this page, which is why it is locked down in Google Cloud to
+      // the Picker API only, with an HTTP-referrer restriction limiting it to
+      // https://signaldeskpro.com/*. Older app builds still pass their own copy
+      // of the key; open() prefers whatever it is given and falls back to this.
+      var DEVELOPER_KEY = 'AIzaSyDFUxWul0yL6gYp2Z8i88tPXxTwECnLU8o';
       var AUDIO_MIMES = 'audio/mpeg,audio/mp3,audio/aac,audio/mp4,audio/x-m4a,audio/m4a,audio/flac,audio/x-flac,audio/wav,audio/x-wav,audio/wave,audio/aiff,audio/x-aiff,audio/aif,application/octet-stream';
       var statusEl = document.getElementById('status');
       var pickerLoaded = false;
@@ -75,7 +83,8 @@
                 post({ type: 'cancelled' });
               }
             });
-          if (opts.apiKey) { builder.setDeveloperKey(opts.apiKey); }
+          var devKey = (opts && opts.apiKey) || DEVELOPER_KEY;
+          if (devKey) { builder.setDeveloperKey(devKey); }
           statusEl.style.display = 'none';
           builder.build().setVisible(true);
         } catch (e) { fail(e && e.message ? e.message : e); }
