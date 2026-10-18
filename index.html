@@ -550,6 +550,17 @@
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .03); g.gain.setValueAtTime(.09, t + dur - .08); g.gain.linearRampToValueAtTime(0, t + dur);
       o.connect(lp).connect(g).connect(LEAD); o.start(t); lfo.start(t); o.stop(t + dur); lfo.stop(t + dur); };
 
+    // Synth chord hits through a dotted-eighth echo, hard left with repeats bouncing right
+    const echoIn = oc.createGain(), dl = oc.createDelay(1), fb = oc.createGain(), damp = oc.createBiquadFilter(), wet = oc.createGain();
+    dl.delayTime.value = s * 3; fb.gain.value = .45; damp.type = 'lowpass'; damp.frequency.value = 2400; wet.gain.value = .55;
+    echoIn.connect(dl).connect(damp).connect(fb).connect(dl); damp.connect(wet).connect(pan(.8));
+    const STAB = pan(-.55);
+    const stab = (t, notes) => notes.forEach(f => ['sawtooth', 'square'].forEach((type, k) => {
+      const o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain();
+      o.type = type; o.frequency.value = f; o.detune.value = k ? -9 : 9; lp.type = 'lowpass'; lp.Q.value = 5;
+      lp.frequency.setValueAtTime(5200, t); lp.frequency.exponentialRampToValueAtTime(700, t + .22);
+      g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      o.connect(lp).connect(g); g.connect(STAB); g.connect(echoIn); o.start(t); o.stop(t + .32); }));
     const E1 = 41.2, E2 = 82.4, G2 = 98, A2 = 110, B1 = 61.7, D2 = 73.4;
     const bassBar = [[0, E1, 2.5], [3, E2, .9], [5, E1, .9], [7, G2, .9], [8, A2, .9, G2], [10, E1, 1.5], [12, D2, .9], [14, E2, 1.2, B1 * 2]];
     const em7 = [164.8, 196, 246.9, 293.7], a7 = [220, 277.2, 329.6, 392];
@@ -560,6 +571,8 @@
       bassBar.forEach(([i, f, d, slide]) => bass(at(bar, i), bar === 3 && i >= 12 ? f * 1.5 : f, d * s * 1.6, slide));
       [2, 5, 9, 11, 14].forEach(i => clav(at(bar, i), bar % 2 ? a7 : em7));
     }
+    stab(at(0, 6), [329.6, 392, 493.9, 587.3, 740]);     // Em9, once early
+    stab(at(2, 10), [440, 554.4, 659.3, 784, 987.8]);   // A9, once late
     lead(at(1, 8), [[.0, 659.3], [.18, 784], [.36, 880], [.6, 987.8], [.9, 880], [1.2, 784]], 1.5);
     lead(at(3, 4), [[.0, 987.8], [.15, 1174.7], [.4, 987.8], [.6, 880], [.8, 784], [1.05, 659.3]], 1.3);
     return oc.startRendering();
