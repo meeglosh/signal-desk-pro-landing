@@ -1,2507 +1,729 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Signal Desk Pro: Professional Audio Player</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --black:    #080807;
-      --dark:     #0f0e0c;
-      --panel:    #161410;
-      --surface:  #1c1a16;
-      --border:   #2a2620;
-      --border2:  #342e26;
-      --muted:    #5a5248;
-      --mid:      #7a7068;
-      --text:     #c8bfb0;
-      --bright:   #e8e0d0;
-      --amber:    #e8820c;
-      --amber2:   #c96e0a;
-      --amber3:   #f09030;
-      --amber-dim:#7a440a;
-      --green:    #3ecf60;
-      --yellow:   #e8d020;
-      --red:      #e83020;
-      --vu-off:   #1a1610;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--black);
-      color: var(--text);
-      font-family: 'Barlow', sans-serif;
-      font-weight: 300;
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    /* ─── ANIMATED GRADIENT BACKGROUND ─── */
-    #gradient-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    #gradient-bg::before,
-    #gradient-bg::after,
-    #gradient-bg .g3,
-    #gradient-bg .g4 {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.12;
-    }
-
-    /* Blob 1 — large amber, top-left drift */
-    #gradient-bg::before {
-      width: 70vw; height: 70vw;
-      background: radial-gradient(circle, #e8820c 0%, transparent 70%);
-      top: -20vw; left: -20vw;
-      animation: drift-a 22s ease-in-out infinite alternate;
-    }
-
-    /* Blob 2 — warm amber, bottom-right drift */
-    #gradient-bg::after {
-      width: 60vw; height: 60vw;
-      background: radial-gradient(circle, #c96e0a 0%, transparent 70%);
-      bottom: -15vw; right: -15vw;
-      animation: drift-b 28s ease-in-out infinite alternate;
-    }
-
-    /* Blob 3 — cooler amber, centre drift */
-    #gradient-bg .g3 {
-      width: 50vw; height: 50vw;
-      background: radial-gradient(circle, #7a3a08 0%, transparent 70%);
-      top: 30%; left: 30%;
-      opacity: 0.10;
-      animation: drift-c 34s ease-in-out infinite alternate;
-    }
-
-    /* Blob 4 — tight hot spot, slow wander */
-    #gradient-bg .g4 {
-      width: 30vw; height: 30vw;
-      background: radial-gradient(circle, #f09030 0%, transparent 65%);
-      top: 10%; right: 20%;
-      opacity: 0.07;
-      animation: drift-d 18s ease-in-out infinite alternate;
-    }
-
-    @keyframes drift-a {
-      0%   { transform: translate(0, 0) scale(1); }
-      33%  { transform: translate(18vw, 12vh) scale(1.1); }
-      66%  { transform: translate(8vw, 28vh) scale(0.92); }
-      100% { transform: translate(22vw, 18vh) scale(1.05); }
-    }
-    @keyframes drift-b {
-      0%   { transform: translate(0, 0) scale(1); }
-      33%  { transform: translate(-14vw, -10vh) scale(1.08); }
-      66%  { transform: translate(-22vw, -20vh) scale(0.95); }
-      100% { transform: translate(-10vw, -14vh) scale(1.12); }
-    }
-    @keyframes drift-c {
-      0%   { transform: translate(0, 0) scale(1); }
-      50%  { transform: translate(-20vw, 14vh) scale(1.15); }
-      100% { transform: translate(16vw, -18vh) scale(0.88); }
-    }
-    @keyframes drift-d {
-      0%   { transform: translate(0, 0); }
-      50%  { transform: translate(10vw, 20vh); }
-      100% { transform: translate(-12vw, 8vh); }
-    }
-
-    /* ─── NOISE TEXTURE OVERLAY ─── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-      opacity: 0.025;
-      pointer-events: none;
-      z-index: 999;
-    }
-
-    /* ─── HEADER ─── */
-    header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 48px;
-      height: 56px;
-      background: rgba(8,8,7,0.92);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-    }
-
-    .logo {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--bright);
-    }
-
-    .logo span {
-      color: var(--amber);
-    }
-
-    nav {
-      display: flex;
-      align-items: center;
-      gap: 36px;
-    }
-
-    nav a {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    nav a:hover { color: var(--text); }
-
-    .nav-cta {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--amber) !important;
-      border: 1px solid var(--amber-dim);
-      padding: 7px 16px;
-      border-radius: 2px;
-      transition: all 0.2s !important;
-    }
-
-    .nav-cta:hover {
-      background: var(--amber) !important;
-      color: var(--black) !important;
-    }
-
-    /* ─── HERO ─── */
-    .hero {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 120px 48px 80px;
-      position: relative;
-    }
-
-    .hero-grid-bg {
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(232,130,12,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(232,130,12,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
-      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 20%, transparent 80%);
-    }
-
-    .hero-eyebrow {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--amber);
-      margin-bottom: 28px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .hero-eyebrow::before,
-    .hero-eyebrow::after {
-      content: '';
-      width: 32px;
-      height: 1px;
-      background: var(--amber-dim);
-    }
-
-    h1 {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 900;
-      font-size: clamp(64px, 10vw, 128px);
-      line-height: 0.9;
-      text-transform: uppercase;
-      letter-spacing: -0.01em;
-      color: var(--bright);
-      text-align: center;
-      margin-bottom: 8px;
-      position: relative;
-    }
-
-    h1 .pro {
-      color: var(--amber);
-      font-style: italic;
-    }
-
-    .hero-sub {
-      font-family: 'Barlow', sans-serif;
-      font-size: 18px;
-      font-weight: 300;
-      color: var(--mid);
-      text-align: center;
-      max-width: 480px;
-      margin: 24px auto 64px;
-      line-height: 1.7;
-    }
-
-    /* ─── VU METER UNIT ─── */
-    .vu-display {
-      width: 100%;
-      max-width: 760px;
-      background: var(--panel);
-      border: 1px solid var(--border2);
-      border-radius: 4px;
-      padding: 24px 32px;
-      position: relative;
-      box-shadow:
-        0 0 0 1px var(--border),
-        0 40px 80px rgba(0,0,0,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.03);
-      margin-bottom: 64px;
-    }
-
-    .vu-display::before {
-      content: 'SIGNAL DESK PRO — LEVEL MONITOR';
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-    }
-
-    .vu-meters {
-      display: flex;
-      gap: 24px;
-      margin-top: 16px;
-    }
-
-    .vu-channel {
-      flex: 1;
-    }
-
-    .vu-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .vu-bar {
-      height: 28px;
-      background: var(--vu-off);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      gap: 2px;
-      padding: 3px;
-    }
-
-    .vu-segment {
-      flex: 1;
-      border-radius: 1px;
-      transition: background 0.04s;
-    }
-
-    /* Scale labels */
-    .vu-scale {
-      display: flex;
-      justify-content: space-between;
-      padding: 0 2px;
-      margin-top: 4px;
-    }
-
-    .vu-scale span {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 8px;
-      color: var(--muted);
-    }
-
-    /* Playback info strip */
-    .track-info {
-      margin-top: 24px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .track-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 600;
-      font-size: 20px;
-      letter-spacing: 0.02em;
-      color: var(--bright);
-      flex: 1;
-    }
-
-    .track-artist {
-      font-size: 13px;
-      color: var(--mid);
-      font-weight: 300;
-    }
-
-    .track-badges {
-      display: flex;
-      gap: 6px;
-    }
-
-    .badge {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 500;
-      padding: 4px 8px;
-      border-radius: 2px;
-      letter-spacing: 0.08em;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      color: var(--muted);
-    }
-
-    .badge.format {
-      color: var(--amber);
-      border-color: var(--amber-dim);
-    }
-
-    /* Scrubber */
-    .scrubber {
-      margin-top: 16px;
-    }
-
-    .scrubber-bar {
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      position: relative;
-      cursor: pointer;
-    }
-
-    .scrubber-fill {
-      height: 100%;
-      width: 42%;
-      background: linear-gradient(90deg, var(--amber2), var(--amber));
-      border-radius: 2px;
-      position: relative;
-    }
-
-    .scrubber-fill::after {
-      content: '';
-      position: absolute;
-      right: -3px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 8px;
-      height: 8px;
-      background: var(--amber3);
-      border-radius: 50%;
-      box-shadow: 0 0 6px var(--amber);
-    }
-
-    .scrubber-times {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 6px;
-    }
-
-    .scrubber-times span {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-    /* Controls row */
-    .controls-row {
-      margin-top: 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .ctrl-btn {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 2px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: all 0.15s;
-      color: var(--mid);
-    }
-
-    .ctrl-btn:hover { border-color: var(--border2); color: var(--text); }
-
-    .ctrl-btn.play {
-      width: 40px;
-      height: 40px;
-      background: var(--amber);
-      border-color: var(--amber);
-      color: var(--black);
-    }
-
-    .ctrl-btn.play:hover { background: var(--amber3); }
-
-    .spacer { flex: 1; }
-
-    .feat-btn {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      padding: 6px 10px;
-      border-radius: 2px;
-      border: 1px solid var(--border2);
-      background: var(--surface);
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .feat-btn.active {
-      background: var(--amber);
-      border-color: var(--amber);
-      color: var(--black);
-    }
-
-    .feat-btn:hover:not(.active) {
-      border-color: var(--amber-dim);
-      color: var(--amber);
-    }
-
-    /* ─── HERO STATS ─── */
-    .hero-stats {
-      display: flex;
-      gap: 48px;
-      margin-top: 0;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat-num {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 800;
-      font-size: 42px;
-      line-height: 1;
-      color: var(--bright);
-      letter-spacing: -0.02em;
-    }
-
-    .stat-num span {
-      color: var(--amber);
-    }
-
-    .stat-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      color: var(--muted);
-      margin-top: 4px;
-      text-transform: uppercase;
-    }
-
-    .stat-divider {
-      width: 1px;
-      background: var(--border);
-      align-self: stretch;
-    }
-
-    /* ─── SECTION SCAFFOLDING ─── */
-    section {
-      padding: 100px 48px;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    .section-header {
-      margin-bottom: 64px;
-    }
-
-    .section-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--amber);
-      margin-bottom: 16px;
-    }
-
-    h2 {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 800;
-      font-size: clamp(40px, 6vw, 72px);
-      line-height: 0.95;
-      text-transform: uppercase;
-      color: var(--bright);
-      letter-spacing: -0.01em;
-    }
-
-    h2 em {
-      font-style: italic;
-      color: var(--amber);
-    }
-
-    .section-desc {
-      font-size: 17px;
-      color: var(--mid);
-      max-width: 460px;
-      margin-top: 20px;
-      line-height: 1.8;
-      font-weight: 300;
-    }
-
-    /* ─── DIVIDER ─── */
-    .section-divider {
-      width: 100%;
-      max-width: 1100px;
-      margin: 0 auto;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border2), transparent);
-    }
-
-    /* ─── FEATURES GRID ─── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2px;
-      background: var(--border);
-    }
-
-    .feature-card {
-      background: var(--dark);
-      padding: 40px 36px;
-      position: relative;
-      overflow: hidden;
-      transition: background 0.2s;
-    }
-
-    .feature-card:hover {
-      background: var(--panel);
-    }
-
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--amber);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s ease;
-    }
-
-    .feature-card:hover::before {
-      transform: scaleX(1);
-    }
-
-    .feature-num {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: var(--border2);
-      letter-spacing: 0.1em;
-      margin-bottom: 24px;
-    }
-
-    .feature-icon {
-      width: 40px;
-      height: 40px;
-      margin-bottom: 20px;
-      color: var(--amber);
-    }
-
-    .feature-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: 22px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      color: var(--bright);
-      margin-bottom: 12px;
-    }
-
-    .feature-desc {
-      font-size: 14px;
-      color: var(--mid);
-      line-height: 1.75;
-      font-weight: 300;
-    }
-
-    /* ─── SIGNAL CHAIN SECTION ─── */
-    .signal-chain {
-      background: var(--panel);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 80px 48px;
-    }
-
-    .signal-chain-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: center;
-    }
-
-    /* Mini VU mockup in features */
-    .mini-vu {
-      background: var(--dark);
-      border: 1px solid var(--border2);
-      border-radius: 3px;
-      padding: 16px 20px;
-      margin-bottom: 40px;
-    }
-
-    .mini-vu-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .mini-vu-bar {
-      height: 16px;
-      background: var(--vu-off);
-      border-radius: 1px;
-      overflow: hidden;
-      display: flex;
-      gap: 1px;
-      padding: 2px;
-      margin-bottom: 6px;
-    }
-
-    .mini-vu-seg {
-      flex: 1;
-      border-radius: 1px;
-    }
-
-    .mode-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 32px;
-    }
-
-    .mode-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      padding: 8px 14px;
-      border-radius: 2px;
-      border: 1px solid var(--border2);
-      color: var(--muted);
-    }
-
-    .mode-tag.lit {
-      background: rgba(232,130,12,0.1);
-      border-color: var(--amber-dim);
-      color: var(--amber);
-    }
-
-    /* ─── SPEC TABLE ─── */
-    .spec-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .spec-table tr {
-      border-bottom: 1px solid var(--border);
-    }
-
-    .spec-table tr:last-child { border-bottom: none; }
-
-    .spec-table td {
-      padding: 14px 0;
-      font-size: 14px;
-    }
-
-    .spec-table td:first-child {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      width: 180px;
-    }
-
-    .spec-table td:last-child {
-      color: var(--text);
-    }
-
-    .spec-table tr:hover td { color: var(--bright); }
-    .spec-table tr:hover td:first-child { color: var(--amber); }
-
-    /* ─── FORMAT SUPPORT ─── */
-    .formats-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 32px;
-    }
-
-    .format-pill {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 8px 16px;
-      border: 1px solid var(--border2);
-      border-radius: 2px;
-      color: var(--text);
-      background: var(--surface);
-      letter-spacing: 0.08em;
-    }
-
-    .format-pill.hi {
-      border-color: var(--amber-dim);
-      color: var(--amber);
-      background: rgba(232,130,12,0.06);
-    }
-
-    /* ─── CTA SECTION ─── */
-    .cta-section {
-      padding: 120px 48px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 600px;
-      height: 300px;
-      background: radial-gradient(ellipse, rgba(232,130,12,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .cta-inner {
-      max-width: 640px;
-      margin: 0 auto;
-      position: relative;
-    }
-
-    .cta-pre {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.25em;
-      color: var(--amber);
-      margin-bottom: 24px;
-      text-transform: uppercase;
-    }
-
-    .cta-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 900;
-      font-size: clamp(52px, 8vw, 96px);
-      line-height: 0.9;
-      text-transform: uppercase;
-      color: var(--bright);
-      margin-bottom: 24px;
-    }
-
-    .cta-sub {
-      font-size: 16px;
-      color: var(--mid);
-      margin-bottom: 48px;
-      font-weight: 300;
-      line-height: 1.7;
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-    }
-
-    .btn-primary {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 16px 40px;
-      background: var(--amber);
-      color: var(--black);
-      border: none;
-      border-radius: 2px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: all 0.2s;
-    }
-
-    .btn-primary:hover {
-      background: var(--amber3);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 24px rgba(232,130,12,0.3);
-    }
-
-    .btn-secondary {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 400;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 16px 40px;
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border2);
-      border-radius: 2px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: all 0.2s;
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--mid);
-      color: var(--bright);
-    }
-
-    .platform-note {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.12em;
-      color: var(--muted);
-      margin-top: 24px;
-    }
-
-    /* ─── FOOTER ─── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 40px 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .footer-logo {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .footer-logo span { color: var(--amber); }
-
-    .footer-links {
-      display: flex;
-      gap: 32px;
-    }
-
-    .footer-links a {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      text-decoration: none;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover { color: var(--text); }
-
-    .footer-copy {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-    }
-
-    /* ─── ANIMATIONS ─── */
-    @keyframes vu-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-
-    @keyframes fade-up {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .hero-eyebrow { animation: fade-up 0.6s ease both; }
-    h1 { animation: fade-up 0.6s 0.1s ease both; }
-    .hero-sub { animation: fade-up 0.6s 0.2s ease both; }
-    .vu-display { animation: fade-up 0.7s 0.3s ease both; }
-    .hero-stats { animation: fade-up 0.6s 0.45s ease both; }
-
-    /* ─── FEATURE CAROUSEL WRAPPER ─── */
-    .feat-carousel { display: block; }
-
-    /* ─── FEATURE SECTIONS (2-col) ─── */
-    .feat-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 100px 48px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: center;
-    }
-
-    .feat-section.flip {
-      direction: rtl;
-    }
-    .feat-section.flip > * { direction: ltr; }
-
-    .screenshot-mock {
-      background: var(--panel);
-      border: 1px solid var(--border2);
-      border-radius: 8px;
-      width: 100%;
-      max-width: 280px;
-      aspect-ratio: 9/19;
-      margin: 0 auto;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 32px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-    }
-
-    .screenshot-mock::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 80px; height: 20px;
-      background: var(--black);
-      border-radius: 0 0 12px 12px;
-      z-index: 2;
-    }
-
-    .mock-screen {
-      position: absolute;
-      inset: 0;
-      padding: 32px 14px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .mock-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 8px;
-      letter-spacing: 0.18em;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-
-    .mock-btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-
-    .mock-btn {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 7px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      padding: 5px 8px;
-      border-radius: 2px;
-      border: 1px solid var(--border2);
-      background: var(--surface);
-      color: var(--muted);
-    }
-
-    .mock-btn.active {
-      background: var(--amber);
-      border-color: var(--amber);
-      color: var(--black);
-    }
-
-    .mock-meter-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .mock-meter-bar {
-      height: 10px;
-      background: var(--vu-off);
-      border-radius: 1px;
-      overflow: hidden;
-      display: flex;
-      gap: 1px;
-      padding: 2px;
-    }
-
-    .mock-seg {
-      flex: 1;
-      border-radius: 1px;
-    }
-
-    .mock-track {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 8px 10px;
-      margin-top: 4px;
-    }
-
-    .mock-track-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 600;
-      font-size: 11px;
-      color: var(--bright);
-      margin-bottom: 2px;
-    }
-
-    .mock-track-sub {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 7px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-    }
-
-    .mock-scrub {
-      height: 2px;
-      background: var(--border);
-      border-radius: 1px;
-      margin-top: 6px;
-      position: relative;
-    }
-
-    .mock-scrub-fill {
-      width: 38%;
-      height: 100%;
-      background: var(--amber);
-      border-radius: 1px;
-    }
-
-    .mock-source-row {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .mock-source {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-    }
-
-    .mock-source-icon {
-      width: 18px;
-      height: 18px;
-      border-radius: 3px;
-      background: var(--border2);
-      flex-shrink: 0;
-    }
-
-    .mock-source-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 8px;
-      color: var(--text);
-      letter-spacing: 0.06em;
-    }
-
-    .mock-source-sub {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 7px;
-      color: var(--muted);
-    }
-
-    .mock-vectorscope {
-      flex: 1;
-      background: var(--vu-off);
-      border-radius: 3px;
-      position: relative;
-      overflow: hidden;
-      min-height: 80px;
-    }
-
-    .mock-vectorscope svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .screenshot-mock img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: top;
-      border-radius: 8px;
-    }
-
-    /* ─── MODES / METERS SECTION ─── */
-    .modes-section {
-      background: var(--panel);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      padding: 80px 48px;
-    }
-
-    .modes-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-    }
-
-    .modes-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 28px;
-    }
-
-    .mode-item {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      padding: 9px 14px;
-      border: 1px solid var(--border2);
-      border-radius: 2px;
-      background: var(--surface);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .mode-tier {
-      font-size: 8px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      padding: 2px 5px;
-      border-radius: 2px;
-      border: 1px solid var(--amber-dim);
-      color: var(--amber);
-    }
-
-    .mode-tier.free {
-      color: var(--muted);
-      border-color: var(--border2);
-    }
-
-    /* ─── PRICING TABLE ─── */
-    .pricing-section {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 100px 48px;
-      text-align: center;
-    }
-
-    .pricing-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 48px;
-      text-align: left;
-    }
-
-    .pricing-table th {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 700;
-      font-size: 20px;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      padding: 12px 24px;
-      text-align: center;
-      border-bottom: 2px solid var(--border2);
-      color: var(--bright);
-    }
-
-    .pricing-table th:first-child {
-      text-align: left;
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: 0.15em;
-    }
-
-    .pricing-table th.pro-col { color: var(--amber); }
-
-    .pricing-table td {
-      padding: 13px 24px;
-      font-size: 14px;
-      border-bottom: 1px solid var(--border);
-      text-align: center;
-      color: var(--muted);
-    }
-
-    .pricing-table td:first-child {
-      text-align: left;
-      font-size: 13px;
-      color: var(--text);
-      font-weight: 300;
-    }
-
-    .pricing-table tr:last-child td { border-bottom: none; }
-    .pricing-table tr:hover td { background: rgba(255,255,255,0.012); }
-
-    .check { font-size: 16px; }
-    .check-free { color: var(--mid); }
-    .check-pro  { color: var(--amber); }
-
-    .pricing-plans {
-      display: flex;
-      gap: 12px;
-      margin-top: 40px;
-      justify-content: center;
-    }
-
-    .plan-pill {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      padding: 10px 24px;
-      border: 1px solid var(--border2);
-      border-radius: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-
-    .plan-pill:hover {
-      border-color: var(--amber-dim);
-      color: var(--amber);
-    }
-
-    /* ─── ILLUSTRATION PANELS ─── */
-    .illus-panel {
-      background: var(--panel);
-      border: 1px solid var(--border2);
-      border-radius: 6px;
-      width: 100%;
-      max-width: 300px;
-      aspect-ratio: 4/5;
-      margin: 0 auto;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 32px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .illus-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 0.22em;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-
-    .illus-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      aspect-ratio: 1;
-      gap: 3px;
-      padding: 2px;
-      border-radius: 3px;
-      background: #1a1510;
-      border: 1px solid #2a2218;
-      color: var(--muted);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.12s, color 0.12s, box-shadow 0.12s;
-    }
-
-    .illus-btn svg {
-      width: 11px;
-      height: 11px;
-      flex-shrink: 0;
-      stroke-width: 1.3;
-    }
-
-    .illus-btn span {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 5px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      line-height: 1;
-      text-transform: uppercase;
-    }
-
-    .illus-btn.on {
-      background: var(--amber);
-      border-color: var(--amber3);
-      color: #0a0804;
-      box-shadow: 0 0 14px rgba(232,130,12,0.35), 0 1px 3px rgba(0,0,0,0.5);
-    }
-
-    /* ─── SCROLLBAR ─── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--black); }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-    /* ─── MOBILE ─── */
-    @media (max-width: 767px) {
-
-      /* Prevent any element causing horizontal page scroll */
-      html { overflow-x: hidden; }
-      body { overflow-x: hidden; max-width: 100vw; }
-
-      /* Header */
-      header { padding: 0 20px; }
-      nav a:not(.nav-cta) { display: none; }
-      .nav-cta { font-size: 9px; padding: 6px 12px; }
-
-      /* Hero */
-      .hero { padding: 88px 20px 56px; }
-      h1 { font-size: clamp(42px, 12vw, 72px); }
-      .hero-sub { font-size: 15px; }
-      .vu-display {
-        margin-bottom: 32px;
-        overflow: hidden;
-      }
-      .vu-display::before {
-        font-size: 7px;
-        letter-spacing: 0.06em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-        display: block;
-      }
-      .hero-stats { gap: 20px; flex-wrap: wrap; justify-content: center; }
-      .stat-divider { display: none; }
-      .stat { min-width: 80px; text-align: center; }
-
-      /* Track info / playback */
-      .track-info { flex-direction: column; gap: 12px; }
-      .playback-controls { gap: 16px; }
-
-      /* Features grid — horizontal scroll carousel */
-      .features-section { padding: 60px 0; }
-      .features-section > h2,
-      .features-section > p { padding: 0 20px; }
-      .features-grid {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        gap: 0;
-        background: transparent;
-        padding: 2px 20px 16px;
-        scrollbar-width: none;
-      }
-      .features-grid::-webkit-scrollbar { display: none; }
-      .feature-card {
-        flex: 0 0 82vw;
-        width: 82vw;
-        max-width: 82vw;
-        box-sizing: border-box;
-        scroll-snap-align: start;
-        border: 1px solid var(--border);
-        margin-right: 2px;
-        overflow: hidden;
-      }
-      .feature-desc {
-        white-space: normal;
-        overflow-wrap: break-word;
-        word-break: break-word;
-      }
-
-      /* Section divider */
-      .section-divider { margin: 0; }
-      .feat-carousel__divider { display: none; }
-
-      /* Feature carousel — horizontal snap scroll */
-      .feat-carousel {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-      .feat-carousel::-webkit-scrollbar { display: none; }
-
-      /* Each slide — locked to viewport width */
-      .feat-carousel .feat-section,
-      .feat-carousel .modes-section {
-        flex: 0 0 100vw;
-        width: 100vw;
-        max-width: 100vw;
-        min-width: 0;
-        scroll-snap-align: start;
-        box-sizing: border-box;
-        padding: 56px 20px;
-        overflow: hidden;
-      }
-
-      /* Single column layout inside each slide */
-      .feat-carousel .feat-section {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 36px;
-        margin: 0;
-      }
-      .feat-carousel .feat-section.flip { direction: ltr; }
-
-      /* Force all children to respect slide width and wrap text */
-      .feat-carousel .feat-section > *,
-      .feat-carousel .modes-inner > * {
-        min-width: 0;
-        max-width: 100%;
-      }
-      .feat-carousel p,
-      .feat-carousel h2,
-      .feat-carousel .section-desc {
-        white-space: normal;
-        overflow-wrap: break-word;
-        word-break: break-word;
-        max-width: 100%;
-      }
-
-      /* Modes section inside carousel */
-      .feat-carousel .modes-section {
-        background: var(--panel);
-        border-top: none;
-        border-bottom: none;
-      }
-      .feat-carousel .modes-inner {
-        grid-template-columns: 1fr;
-        gap: 40px;
-      }
-
-      /* Illustration panels — full width, no fixed height */
-      .illus-panel {
-        max-width: 100%;
-        width: 100%;
-        aspect-ratio: auto;
-        height: auto;
-        box-sizing: border-box;
-      }
-
-      /* Console buttons — scale icons and labels for larger button size on mobile */
-      .illus-btn svg {
-        width: 36%;
-        height: 36%;
-      }
-      .illus-btn span {
-        font-size: 9px;
-      }
-      .illus-btn {
-        gap: 6px;
-        border-radius: 6px;
-      }
-
-      /* Pricing */
-      .pricing-section { padding: 56px 20px; overflow: hidden; }
-      .pricing-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        margin: 0 -20px;
-        padding: 0 20px;
-      }
-      .pricing-table { min-width: 520px; }
-      /* Pricing tier cards — 2×2 grid */
-      .pricing-tiers {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 10px !important;
-      }
-
-      /* CTA */
-      .cta-section { padding: 80px 20px; }
-      .cta-title { font-size: clamp(40px, 12vw, 80px); }
-      .cta-buttons { flex-direction: column; align-items: stretch; }
-      .btn-primary, .btn-secondary { text-align: center; }
-
-      /* Footer */
-      footer {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 20px;
-        padding: 32px 20px;
-      }
-      .footer-links { flex-wrap: wrap; gap: 16px 24px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Signal Desk Pro · Mix translation in your pocket</title>
+<meta name="description" content="Signal Desk Pro is an iPhone player for mixing engineers: twelve console modes, nine meters, Dropbox sync, and export to WAV, AIFF or AAC.">
+<meta name="theme-color" content="#14120f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2314120f'/><circle cx='16' cy='16' r='7' fill='none' stroke='%23e39a3b' stroke-width='3'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scrollcraft.css">
+<style>
+  :root {
+    --sc-canvas:     #14120f;
+    --sc-surface:    #1d1a16;
+    --sc-ink:        #ece5d8;
+    --sc-ink-soft:   #a59c8c;
+    --sc-accent:     #e39a3b;
+    --sc-accent-ink: #1a140c;
+    --sc-font-display: "Archivo", system-ui, sans-serif;
+    --sc-font-text:    "Archivo", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --panel: #1b1915;
+    --panel-hi: #26231e;
+    --seam: #2f2b25;
+    --engrave: #7d7466;
+    --lamp: #ffb54d;
+    --face: #e9d3a0;
+  }
+  html { background: var(--sc-canvas); }
+  body { background: var(--sc-canvas); color: var(--sc-ink); font-family: var(--sc-font-text); font-variation-settings: "wdth" 100; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; }
+
+
+  /* Vintage texture: film grain over everything, brushed grain on the panels, a dark vignette at the edges */
+  .grain { position: fixed; inset: -50%; z-index: 40; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 200px; opacity: .16; }
+  .vignette { position: fixed; inset: 0; z-index: 39; pointer-events: none; background: radial-gradient(ellipse 120% 90% at 50% 45%, transparent 45%, rgba(6,5,4,.7) 100%); }
+  body { background-image: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(227,154,59,.05), transparent 70%); background-attachment: fixed; }
+  .panel { background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 180px,
+      linear-gradient(180deg, var(--panel-hi), var(--panel) 40%);
+    background-blend-mode: normal, soft-light, normal; }
+  .vu { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), radial-gradient(120% 90% at 50% 100%, #f3ddb0 0%, #e2c58a 55%, #c9a766 100%); background-size: 160px, auto; background-blend-mode: multiply, normal; }
+
+  /* Engraved label idiom: the page's only "eyebrow" voice */
+  .lbl { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--engrave); }
+  .lbl b { color: var(--sc-ink-soft); font-weight: 500; }
+
+  /* ── Chrome: a faceplate strip, not a marketing bar ── */
+  .strip {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    display: flex; align-items: center; gap: 1.5rem;
+    padding: .7rem clamp(16px, 3vw, 40px);
+    background: rgba(20,18,15,.86); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--seam);
+  }
+  .strip__mark { display: flex; align-items: center; gap: .6rem; text-decoration: none; font-weight: 700; font-variation-settings: "wdth" 112; letter-spacing: .02em; }
+  .strip__mark i { width: 10px; height: 10px; border-radius: 50%; background: #3a332a; box-shadow: inset 0 1px 1px rgba(0,0,0,.6); transition: background .3s, box-shadow .3s; }
+  body.on .strip__mark i { background: var(--lamp); box-shadow: 0 0 0 3px rgba(227,154,59,.18), 0 1px 6px rgba(255,181,77,.5); }
+  .strip nav { display: flex; gap: 1.4rem; margin-left: auto; }
+  .strip nav a { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; text-decoration: none; color: var(--sc-ink-soft); padding: .4rem 0; border-bottom: 1px solid transparent; }
+  .strip nav a:hover, .strip nav a[aria-current] { color: var(--sc-ink); border-color: var(--sc-accent); }
+  .strip__status { font-family: var(--mono); font-size: .72rem; color: var(--sc-accent); border: 1px solid #4a3a22; padding: .35rem .6rem; border-radius: 4px; white-space: nowrap; }
+  @media (max-width: 860px) { .strip nav { display: none; } .strip__status { margin-left: auto; } }
+
+  /* ── Panel material ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel-hi), var(--panel) 40%);
+    border: 1px solid var(--seam); border-radius: 14px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 30px 60px -30px rgba(0,0,0,.7);
+  }
+  .screw { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #57504a, #23201c); }
+  .screw::after { content: ""; position: absolute; left: 1px; right: 1px; top: 4px; height: 1px; background: #15130f; transform: rotate(35deg); }
+
+  /* ── 1 · Faceplate ── */
+  .face { min-height: 100svh; display: grid; place-items: center; padding: 6rem clamp(16px, 4vw, 56px) 3rem; }
+  .face__unit { position: relative; width: min(1180px, 100%); padding: clamp(20px, 3vw, 40px); display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+  .face__unit .screw:nth-of-type(1) { top: 12px; left: 12px; } .face__unit .screw:nth-of-type(2) { top: 12px; right: 12px; }
+  .face__unit .screw:nth-of-type(3) { bottom: 12px; left: 12px; } .face__unit .screw:nth-of-type(4) { bottom: 12px; right: 12px; }
+  .face h1 { font-size: clamp(2.6rem, 6.2vw, 5.6rem); line-height: .95; letter-spacing: -.022em; font-weight: 720; font-variation-settings: "wdth" 82; margin: .9rem 0 1.2rem; text-wrap: balance; }
+  .face h1 em { font-style: normal; color: var(--sc-accent); }
+  .face p.lede { font-size: clamp(1.02rem, 1.3vw, 1.15rem); line-height: 1.6; color: var(--sc-ink-soft); max-width: 44ch; }
+  .face__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 2rem; }
+  .face__note { font-family: var(--mono); font-size: .72rem; color: var(--engrave); max-width: 32ch; line-height: 1.5; }
+
+  .vu-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; background: #0f0e0c; border-radius: 10px; border: 1px solid #262219; }
+  .vu { position: relative; aspect-ratio: 5 / 4; border-radius: 6px; overflow: hidden;
+        background: radial-gradient(120% 90% at 50% 100%, #f3ddb0 0%, #e2c58a 55%, #c9a766 100%);
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), inset 0 10px 30px rgba(0,0,0,.25); transition: filter .6s; }
+  body:not(.on) .vu { filter: brightness(.55) saturate(.7); }
+  .vu svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .vu__needle { transform-origin: 100px 118px; transform: rotate(-48deg); }
+  .vu__cap { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font-family: var(--mono); font-size: .68rem; color: #4b3b22; }
+
+  /* Keycap button: the app's own control idiom */
+  .key {
+    --k: #2a261f; appearance: none; border: 0; cursor: pointer; font: inherit; color: var(--sc-ink-soft);
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: .45rem;
+    min-width: 64px; min-height: 64px; padding: .8rem 1rem; border-radius: 10px;
+    background: linear-gradient(180deg, #332e26, var(--k));
+    box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0d0c0a, 0 8px 14px -6px rgba(0,0,0,.8);
+    transition: transform .08s ease, box-shadow .08s ease, background-color .2s;
+  }
+  .key:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 0 #0d0c0a; }
+  .key[aria-pressed="true"] { background: linear-gradient(180deg, #f0ab4c, #d48a2c); color: var(--sc-accent-ink); }
+  .key--power { flex-direction: row; gap: .7rem; font-family: var(--mono); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; padding: 1rem 1.4rem; color: var(--sc-ink); }
+  .key--power svg { width: 18px; height: 18px; }
+  /* Until the signal is on, the power key breathes so visitors find it */
+  @keyframes power-breathe {
+    0%, 100% { box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0d0c0a, 0 0 0 0 rgba(227,154,59,0), 0 0 0 rgba(255,181,77,0); }
+    50%      { box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0d0c0a, 0 0 0 6px rgba(227,154,59,.22), 0 4px 30px rgba(255,181,77,.5); }
+  }
+  @keyframes power-lamp { 0%, 100% { color: var(--sc-ink); } 50% { color: var(--lamp); } }
+  body:not(.on) #power { animation: power-breathe 2.6s ease-in-out infinite; }
+  body:not(.on) #power svg { animation: power-lamp 2.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { body:not(.on) #power { animation: none; box-shadow: 0 4px 0 #0d0c0a, 0 0 0 2px rgba(227,154,59,.5); } body:not(.on) #power svg { animation: none; color: var(--lamp); } }
+
+  /* ── 2 · Console (the peak) ── */
+  .console { padding: clamp(5rem, 12vh, 9rem) clamp(16px, 4vw, 56px) clamp(4rem, 9vh, 7rem); }
+  .console__grid { width: min(1180px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(28px, 4vw, 64px); align-items: start; }
+  .console h2, .sec-h { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; letter-spacing: -.02em; font-weight: 700; font-variation-settings: "wdth" 84; margin: .8rem 0 1.1rem; text-wrap: balance; }
+  .console__copy p, .prose { color: var(--sc-ink-soft); line-height: 1.65; max-width: 52ch; text-wrap: pretty; }
+  .console__deck { position: relative; padding: clamp(16px, 2.4vw, 28px); }
+  .keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 12px; }
+  .keys .key { width: 100%; aspect-ratio: 1 / .92; padding: .5rem; }
+  .keys .key svg { width: 22px; height: 22px; opacity: .85; }
+  .keys .key span { font-family: var(--mono); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; text-align: center; line-height: 1.2; }
+  .keys .key[data-tier="pro"]::after { content: "PRO"; position: absolute; }
+  .keys .key { position: relative; }
+  .keys .key[data-tier="pro"]::after { top: 6px; right: 7px; font-family: var(--mono); font-size: .52rem; letter-spacing: .1em; color: #8a6a3a; }
+  .keys .key[aria-pressed="true"][data-tier="pro"]::after { color: rgba(26,20,12,.6); }
+  .keys__group { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; margin-top: .6rem; padding-top: .9rem; border-top: 1px solid var(--seam); }
+  .keys__group:first-child { margin-top: 0; padding-top: 0; border: 0; }
+  .readout { margin-top: 20px; padding: 14px 16px; border-radius: 8px; background: #0f0e0c; border: 1px solid #262219; font-family: var(--mono); font-size: .8rem; line-height: 1.6; min-height: 6.4em; }
+  .readout__mode { color: var(--lamp); }
+  .readout__desc { color: var(--sc-ink-soft); }
+  .readout__state { color: var(--engrave); }
+  .mini-vu { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin-top: 14px; font-family: var(--mono); font-size: .62rem; color: var(--engrave); }
+  .mini-vu__bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #6b8f3a 0 70%, #d4a23a 70% 88%, #d0553a 88%); clip-path: inset(0 calc(100% - var(--lv, 0%)) 0 0 round 3px); opacity: .9; }
+  .mini-vu__track { position: relative; height: 6px; border-radius: 3px; background: #23201b; }
+  .mini-vu__track .mini-vu__bar { position: absolute; inset: 0; }
+
+  /* ── 3 · Meters rail (pan) ── */
+  .meters__stage { display: flex; flex-direction: column; justify-content: center; height: 100svh; gap: 2rem; overflow: hidden; }
+  .meters__head { padding: 0 clamp(16px, 4vw, 56px); display: flex; justify-content: space-between; align-items: end; gap: 2rem; flex-wrap: wrap; }
+  .meters__head .sec-h { margin: .6rem 0 0; }
+  .meters__head p { color: var(--sc-ink-soft); max-width: 46ch; line-height: 1.6; }
+  .rail { transform: translate3d(calc(var(--sc-p, 0) * var(--travel, 0px) * -1), 0, 0); will-change: transform; display: flex; gap: 18px; padding: 0 clamp(16px, 4vw, 56px); width: max-content; }
+  .meter { width: clamp(250px, 24vw, 320px); flex: none; padding: 14px; display: flex; flex-direction: column; gap: 10px; justify-content: flex-start; } .meter__screen { flex: none; }
+  .meter__screen { aspect-ratio: 4 / 3; border-radius: 8px; background: #0d0c0a; border: 1px solid #262219; overflow: hidden; position: relative; }
+  .meter__screen canvas, .meter__screen svg, .meter__screen img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .meter h3 { font-size: 1.05rem; font-weight: 650; font-variation-settings: "wdth" 90; display: flex; justify-content: space-between; align-items: baseline; }
+  .meter h3 small { font-family: var(--mono); font-size: .6rem; letter-spacing: .12em; color: var(--engrave); font-weight: 400; }
+  .meter h3, .meter p { margin: 0; }
+  .meter p { color: var(--sc-ink-soft); font-size: .9rem; line-height: 1.5; }
+  .meter__live { position: absolute; top: 8px; left: 10px; font-family: var(--mono); font-size: .58rem; letter-spacing: .12em; color: #5d5446; }
+  body.on .meter__live { color: var(--lamp); }
+
+  /* ── 4 · Sources (pinned sync log) ── */
+  .sync__stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 80px); align-items: center; height: 100svh; padding: 5rem clamp(16px, 4vw, 56px) 2rem; max-width: 1280px; margin: 0 auto; }
+  .log { padding: 18px 20px; font-family: var(--mono); font-size: .8rem; line-height: 1.5; }
+  .log__head { display: flex; justify-content: space-between; color: var(--engrave); padding-bottom: 12px; margin-bottom: 8px; border-bottom: 1px solid var(--seam); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; }
+  .log ol { list-style: none; padding: 0; margin: 0; }
+  .log li { display: grid; grid-template-columns: 4.6em 1fr auto; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #2a2620; }
+  .log li .t { color: var(--engrave); }
+  .log li .f { color: var(--sc-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log li .s { color: #8fae5b; }
+  .log li .s.new { color: var(--lamp); }
+  .log li .s.ask { color: #c9b27a; }
+  .log__foot { margin-top: 12px; color: var(--sc-ink-soft); font-size: .72rem; }
+  .src-list { display: grid; gap: 1.4rem; margin-top: 1.8rem; }
+  .src-list div { padding-left: 1rem; border-left: 2px solid var(--seam); }
+  .src-list h3 { font-size: 1rem; font-weight: 650; margin-bottom: .3rem; }
+  .src-list p { color: var(--sc-ink-soft); font-size: .92rem; line-height: 1.55; max-width: 48ch; }
+
+  /* ── 5 · Take it with you ── */
+  .take { padding: clamp(5rem, 12vh, 9rem) clamp(16px, 4vw, 56px); }
+  .take__grid { width: min(1180px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 80px); align-items: center; }
+  .phones { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  /* The second phone deals out from behind the first as the section arrives.
+     --k runs 1 → 0 across flow progress 0.12 → 0.42, then holds. */
+  .phones { --k: clamp(0, calc((0.42 - var(--sc-p, 1)) / 0.3), 1); }
+  .ph { will-change: transform; }
+  .ph--a { position: relative; z-index: 2; transform: translate3d(calc(var(--k) * 30%), calc(var(--k) * 24px), 0) rotate(calc(var(--k) * -3deg)); }
+  .ph--b { transform: translate3d(calc(var(--k) * -78%), calc(var(--k) * 40px), 0) rotate(calc(var(--k) * 5deg)) scale(calc(1 - var(--k) * .06)); opacity: calc(1 - var(--k) * .5); }
+  .ph figcaption { opacity: calc(1 - var(--k) * 1.6); }
+  @media (prefers-reduced-motion: reduce) { .phones { --k: 0; } }
+  .phone { border-radius: 34px; padding: 8px; background: #0c0b09; border: 1px solid #2c2822; box-shadow: 0 40px 60px -30px rgba(0,0,0,.8); }
+  .phone img { width: 100%; height: auto; border-radius: 27px; display: block; }
+  .phones figcaption { margin-top: .8rem; }
+  .specs { margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--seam); }
+  .specs div { padding: 1rem 1rem 1rem 0; border-bottom: 1px solid var(--seam); }
+  .specs dt { margin-bottom: .35rem; }
+  .specs dd { margin: 0; color: var(--sc-ink); font-size: .95rem; line-height: 1.45; }
+
+  /* ── 6 · Plans ── */
+  .plans { padding: clamp(4rem, 10vh, 7rem) clamp(16px, 4vw, 56px); }
+  .plans__wrap { width: min(1180px, 100%); margin: 0 auto; }
+  .plans__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 2.4rem; border: 1px solid var(--seam); border-radius: 14px; overflow: hidden; }
+  .plan { padding: 1.6rem 1.4rem 1.8rem; background: var(--panel); display: flex; flex-direction: column; gap: .5rem; }
+  .plan + .plan { border-left: 1px solid var(--seam); }
+  .plan--lit { background: linear-gradient(180deg, #2b241a, var(--panel) 70%); }
+  .plan__price { font-size: clamp(2rem, 3.2vw, 2.8rem); font-weight: 750; font-variation-settings: "wdth" 70; letter-spacing: -.02em; line-height: 1; margin: .4rem 0 .2rem; }
+  .plan__price small { font-size: .9rem; font-weight: 400; color: var(--sc-ink-soft); letter-spacing: 0; font-variation-settings: "wdth" 100; }
+  .plan p { color: var(--sc-ink-soft); font-size: .9rem; line-height: 1.5; }
+  .compare { margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 4vw, 56px); }
+  .compare ul { list-style: none; padding: 0; margin: .8rem 0 0; }
+  .compare li { padding: .55rem 0; border-bottom: 1px solid var(--seam); color: var(--sc-ink); font-size: .93rem; line-height: 1.45; }
+  .compare li span { color: var(--sc-ink-soft); }
+  .fineprint { margin-top: 1.4rem; font-size: .8rem; color: var(--sc-ink-soft); line-height: 1.6; max-width: 80ch; }
+
+  /* ── 7 · Power down (close) ── */
+  .close { min-height: 92svh; display: grid; place-items: center; padding: 6rem clamp(16px, 4vw, 56px) 2rem; }
+  .close__unit { width: min(880px, 100%); text-align: left; }
+  .close h2 { font-size: clamp(2.4rem, 5.6vw, 4.8rem); line-height: .96; letter-spacing: -.022em; font-weight: 720; font-variation-settings: "wdth" 82; margin: 1rem 0 1.2rem; text-wrap: balance; }
+  .close__row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 2rem; }
+  .badge { display: inline-flex; align-items: center; gap: .6rem; padding: .95rem 1.3rem; border-radius: 10px; border: 1px solid #4a3a22; font-family: var(--mono); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--sc-accent); }
+  .foot { margin-top: 5rem; padding-top: 1.4rem; border-top: 1px solid var(--seam); display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; }
+  .foot nav { display: flex; gap: 1.6rem; flex-wrap: wrap; }
+  .foot a { text-decoration: none; color: var(--sc-ink-soft); font-size: .88rem; }
+  .foot a:hover { color: var(--sc-ink); }
+
+  /* ── Small screens: separate composition, not a squeeze ── */
+  @media (max-width: 860px) {
+    .face__unit, .console__grid, .sync__stage, .take__grid, .compare { grid-template-columns: 1fr; }
+    .face { padding-top: 5rem; }
+    .face__unit { padding: 22px 16px; }
+    .face h1 { font-size: clamp(2.4rem, 11vw, 3.4rem); }
+    .keys { gap: 10px 8px; }
+    .keys .key span { font-size: .56rem; letter-spacing: .06em; }
+    .console__deck { order: 2; }
+    .plans__row { grid-template-columns: 1fr 1fr; }
+    .plan:nth-child(3) { border-left: 0; }
+    .plan:nth-child(n+3) { border-top: 1px solid var(--seam); }
+    .sync__stage { padding-top: 4.5rem; align-content: center; gap: 1.6rem; }
+    .src-list { display: none; }
+    .sync__copy .prose { font-size: .92rem; }
+    .specs { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vu__needle { transition: none !important; }
+  }
+</style>
 </head>
 <body>
 
-  <!-- ANIMATED GRADIENT BACKGROUND -->
-  <div id="gradient-bg"><div class="g3"></div><div class="g4"></div></div>
+<span data-sc-progress></span>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo">Signal Desk <span>Pro</span></div>
-    <nav>
-      <a href="#console">Console</a>
-      <a href="#meters">Meters</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#" onclick="return false;" class="nav-cta">Coming soon on <span style="text-transform:none;">i</span>OS</a>
-    </nav>
-  </header>
+<header class="strip">
+  <a class="strip__mark" href="#top" aria-label="Signal Desk Pro, top"><i aria-hidden="true"></i>Signal Desk Pro</a>
+  <nav aria-label="Sections">
+    <a href="#console">Console</a>
+    <a href="#meters">Meters</a>
+    <a href="#sources">Sources</a>
+    <a href="#export">Export</a>
+    <a href="#plans">Plans</a>
+  </nav>
+  <span class="strip__status">Coming soon · iOS</span>
+</header>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-grid-bg"></div>
+<main id="top">
 
-    <div class="hero-eyebrow">Professional iOS Audio Player</div>
-
-    <h1>Mix Translation.<br>In Your <span class="pro">Pocket.</span></h1>
-
-    <p class="hero-sub">
-      Signal Desk Pro is a professional audio player for iOS. Process, analyze, and export your mixes anywhere.
-    </p>
-
-    <!-- VU METER DISPLAY -->
-    <div class="vu-display">
-      <div class="vu-meters" style="gap:12px;">
-        <!-- Left analog gauge -->
-        <div class="vu-channel" style="background:var(--dark); border:1px solid var(--border); border-radius:3px; padding:6px 8px;">
-          <svg viewBox="0 0 160 110" width="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="vgA" cx="50%" cy="78%" r="65%">
-                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
-                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
-                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <rect width="160" height="110" rx="3" fill="#130f09"/>
-            <rect width="160" height="110" rx="3" fill="url(#vgA)"/>
-            <!-- Arc zones: center (80,100), r=72 -->
-            <path d="M 10.5 81.4 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#1c1710" stroke-width="5"/>
-            <path d="M 10.5 81.4 A 72 72 0 0 1 122.3 41.7" fill="none" stroke="#3ecf60" stroke-width="5" opacity="0.38"/>
-            <path d="M 122.3 41.7 A 72 72 0 0 1 139.0 58.7" fill="none" stroke="#e8d020" stroke-width="5" opacity="0.38"/>
-            <path d="M 139.0 58.7 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#e83020" stroke-width="5" opacity="0.38"/>
-            <!-- Inner arc shadow -->
-            <path d="M 18.5 84.7 A 62 62 0 0 1 141.5 84.7" fill="none" stroke="#0d0b07" stroke-width="2" opacity="0.6"/>
-            <!-- Tick marks -->
-            <line x1="10.5" y1="81.4" x2="17.5" y2="82.8" stroke="#2a2418" stroke-width="1"/>
-            <line x1="44.3" y1="44.9" x2="49.3" y2="48.2" stroke="#2a2418" stroke-width="1"/>
-            <line x1="80" y1="28" x2="80" y2="35" stroke="#2a2418" stroke-width="1"/>
-            <line x1="122.3" y1="41.7" x2="117.8" y2="46.4" stroke="#2a2418" stroke-width="1"/>
-            <line x1="139.0" y1="58.7" x2="133.8" y2="62.7" stroke="#e83020" stroke-width="1" opacity="0.5"/>
-            <line x1="149.5" y1="81.4" x2="142.5" y2="82.8" stroke="#e83020" stroke-width="1" opacity="0.5"/>
-            <!-- Scale labels -->
-            <text x="6" y="93" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-20</text>
-            <text x="80" y="22" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-7</text>
-            <text x="154" y="93" fill="#c03018" font-size="7" font-family="monospace" text-anchor="middle" opacity="0.7">+3</text>
-            <!-- Needle -->
-            <line x1="80" y1="100" x2="80" y2="32" stroke="#e8ddd0" stroke-width="1.2" stroke-linecap="round">
-              <animateTransform attributeName="transform" type="rotate"
-                values="16 80 100; 23 80 100; 9 80 100; 26 80 100; 7 80 100; 19 80 100; 13 80 100; 22 80 100; 16 80 100"
-                keyTimes="0;0.12;0.27;0.44;0.57;0.70;0.82;0.93;1"
-                dur="3.4s" repeatCount="indefinite"
-                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
-            </line>
-            <!-- Pivot -->
-            <circle cx="80" cy="100" r="4" fill="#e8820c"/>
-            <circle cx="80" cy="100" r="1.8" fill="#0d0b07"/>
-            <!-- Reading + label -->
-            <text x="80" y="70" fill="#a09080" font-size="11" font-family="monospace" text-anchor="middle">-6.1</text>
-            <text x="80" y="81" fill="#3a3020" font-size="7" font-family="monospace" text-anchor="middle">dBVU</text>
-            <text x="80" y="96" fill="#4a4030" font-size="7.5" font-family="monospace" text-anchor="middle" letter-spacing="4">L</text>
+  <!-- 1 · FACEPLATE -->
+  <section class="face" aria-labelledby="h-face">
+    <div class="face__unit panel">
+      <span class="screw"></span><span class="screw"></span><span class="screw"></span><span class="screw"></span>
+      <div>
+        <p class="lbl">Signal Desk Pro <b>· for iPhone</b></p>
+        <h1 id="h-face">Hear your mix the way <em>everyone else</em> will.</h1>
+        <p class="lede">A player built for mixing engineers. Pull bounces from Dropbox, Google Drive or your phone itself, check them through twelve console modes and nine meters, then share it on.</p>
+        <div class="face__controls">
+          <button class="key key--power" id="power" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
+            <span id="power-label">Power on</span>
+          </button>
+          <p class="face__note">Plays a short synthesized funk loop in your browser. Headphones are best.</p>
+        </div>
+      </div>
+      <div class="vu-pair" role="img" aria-label="Two analog VU meters, left and right channel">
+        <div class="vu" data-ch="0">
+          <svg viewBox="0 0 200 160" aria-hidden="true">
+            <path d="M28 82 A86 86 0 0 1 172 82" fill="none" stroke="#3a2c18" stroke-width="1.4"/>
+            <path d="M138 52 A86 86 0 0 1 172 82" fill="none" stroke="#b6402a" stroke-width="4"/>
+            <g font-family="JetBrains Mono, monospace" font-size="9" fill="#3a2c18" text-anchor="middle">
+              <text x="36" y="66">-20</text><text x="66" y="44">-10</text><text x="98" y="36">-5</text><text x="126" y="40">0</text><text x="160" y="56" fill="#b6402a">+3</text>
+            </g>
+            <text x="100" y="100" text-anchor="middle" font-family="Archivo, sans-serif" font-size="11" font-weight="700" fill="#4b3b22" letter-spacing="2">VU</text>
+            <g class="vu__needle"><line x1="100" y1="118" x2="100" y2="30" stroke="#1b1610" stroke-width="1.6" stroke-linecap="round"/></g>
+            <circle cx="100" cy="118" r="7" fill="#1b1610"/>
           </svg>
+          <span class="vu__cap">L <span data-db>-∞</span> dBVU</span>
         </div>
-        <!-- Right analog gauge -->
-        <div class="vu-channel" style="background:var(--dark); border:1px solid var(--border); border-radius:3px; padding:6px 8px;">
-          <svg viewBox="0 0 160 110" width="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="vgB" cx="50%" cy="78%" r="65%">
-                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
-                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
-                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <rect width="160" height="110" rx="3" fill="#130f09"/>
-            <rect width="160" height="110" rx="3" fill="url(#vgB)"/>
-            <path d="M 10.5 81.4 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#1c1710" stroke-width="5"/>
-            <path d="M 10.5 81.4 A 72 72 0 0 1 122.3 41.7" fill="none" stroke="#3ecf60" stroke-width="5" opacity="0.38"/>
-            <path d="M 122.3 41.7 A 72 72 0 0 1 139.0 58.7" fill="none" stroke="#e8d020" stroke-width="5" opacity="0.38"/>
-            <path d="M 139.0 58.7 A 72 72 0 0 1 149.5 81.4" fill="none" stroke="#e83020" stroke-width="5" opacity="0.38"/>
-            <path d="M 18.5 84.7 A 62 62 0 0 1 141.5 84.7" fill="none" stroke="#0d0b07" stroke-width="2" opacity="0.6"/>
-            <line x1="10.5" y1="81.4" x2="17.5" y2="82.8" stroke="#2a2418" stroke-width="1"/>
-            <line x1="44.3" y1="44.9" x2="49.3" y2="48.2" stroke="#2a2418" stroke-width="1"/>
-            <line x1="80" y1="28" x2="80" y2="35" stroke="#2a2418" stroke-width="1"/>
-            <line x1="122.3" y1="41.7" x2="117.8" y2="46.4" stroke="#2a2418" stroke-width="1"/>
-            <line x1="139.0" y1="58.7" x2="133.8" y2="62.7" stroke="#e83020" stroke-width="1" opacity="0.5"/>
-            <line x1="149.5" y1="81.4" x2="142.5" y2="82.8" stroke="#e83020" stroke-width="1" opacity="0.5"/>
-            <text x="6" y="93" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-20</text>
-            <text x="80" y="22" fill="#2e2618" font-size="7" font-family="monospace" text-anchor="middle">-7</text>
-            <text x="154" y="93" fill="#c03018" font-size="7" font-family="monospace" text-anchor="middle" opacity="0.7">+3</text>
-            <line x1="80" y1="100" x2="80" y2="32" stroke="#e8ddd0" stroke-width="1.2" stroke-linecap="round">
-              <animateTransform attributeName="transform" type="rotate"
-                values="14 80 100; 25 80 100; 11 80 100; 21 80 100; 6 80 100; 20 80 100; 15 80 100; 24 80 100; 14 80 100"
-                keyTimes="0;0.10;0.25;0.42;0.56;0.68;0.80;0.92;1"
-                dur="3.0s" repeatCount="indefinite"
-                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
-            </line>
-            <circle cx="80" cy="100" r="4" fill="#e8820c"/>
-            <circle cx="80" cy="100" r="1.8" fill="#0d0b07"/>
-            <text x="80" y="70" fill="#a09080" font-size="11" font-family="monospace" text-anchor="middle">-5.9</text>
-            <text x="80" y="81" fill="#3a3020" font-size="7" font-family="monospace" text-anchor="middle">dBVU</text>
-            <text x="80" y="96" fill="#4a4030" font-size="7.5" font-family="monospace" text-anchor="middle" letter-spacing="4">R</text>
+        <div class="vu" data-ch="1">
+          <svg viewBox="0 0 200 160" aria-hidden="true">
+            <path d="M28 82 A86 86 0 0 1 172 82" fill="none" stroke="#3a2c18" stroke-width="1.4"/>
+            <path d="M138 52 A86 86 0 0 1 172 82" fill="none" stroke="#b6402a" stroke-width="4"/>
+            <g font-family="JetBrains Mono, monospace" font-size="9" fill="#3a2c18" text-anchor="middle">
+              <text x="36" y="66">-20</text><text x="66" y="44">-10</text><text x="98" y="36">-5</text><text x="126" y="40">0</text><text x="160" y="56" fill="#b6402a">+3</text>
+            </g>
+            <text x="100" y="100" text-anchor="middle" font-family="Archivo, sans-serif" font-size="11" font-weight="700" fill="#4b3b22" letter-spacing="2">VU</text>
+            <g class="vu__needle"><line x1="100" y1="118" x2="100" y2="30" stroke="#1b1610" stroke-width="1.6" stroke-linecap="round"/></g>
+            <circle cx="100" cy="118" r="7" fill="#1b1610"/>
           </svg>
+          <span class="vu__cap">R <span data-db>-∞</span> dBVU</span>
         </div>
       </div>
-
-      <div class="track-info">
-        <div style="flex:1">
-          <div class="track-title">Late Bloom_v1.3</div>
-          <div class="track-artist">3:48 &nbsp;·&nbsp; Dropbox</div>
-        </div>
-        <div class="track-badges">
-          <span class="badge format">AIFF</span>
-          <span class="badge">57.6 MB</span>
-        </div>
-      </div>
-
-      <div class="scrubber">
-        <div class="scrubber-bar">
-          <div class="scrubber-fill"></div>
-        </div>
-        <div class="scrubber-times">
-          <span>1:35</span>
-          <span>3:48</span>
-        </div>
-      </div>
-
-      <div class="controls-row">
-        <button class="ctrl-btn" title="Skip back">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h2v12H3zm3.5 6L13 2v12z"/></svg>
-        </button>
-        <button class="ctrl-btn" title="Shuffle">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3L9.5 8 5 13h2l4.5-5L7 3zm3 0l4.5 5-4.5 5h2l4.5-5L10 3z"/></svg>
-        </button>
-        <button class="ctrl-btn play" title="Play/Pause">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6z"/></svg>
-        </button>
-        <button class="ctrl-btn" title="Repeat">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 6h10V4l4 3-4 3V8H4v4H2zm12 4H4v2l-4-3 4-3v2h10z"/></svg>
-        </button>
-        <button class="ctrl-btn" title="Skip forward">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13 2h-2v12h2zM9.5 8L3 2v12z"/></svg>
-        </button>
-
-        <div class="spacer"></div>
-
-        <button class="feat-btn">STEREO</button>
-        <button class="feat-btn active">CAR SIM</button>
-        <button class="feat-btn">MONO</button>
-        <button class="feat-btn">BASS MONO</button>
-        <button class="feat-btn">M/S FLIP</button>
-      </div>
-    </div>
-
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num">12<span>+</span></div>
-        <div class="stat-label">Console Modes</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <div class="stat-num">8</div>
-        <div class="stat-label">Meter Types</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <div class="stat-num">3</div>
-        <div class="stat-label">Export Formats</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <div class="stat-num">iOS<span>16+</span></div>
-        <div class="stat-label">Platform</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FEATURE GRID -->
-  <section style="padding-top:0; max-width:100%; padding-left:0; padding-right:0;">
-    <div class="features-grid">
-
-      <div class="feature-card">
-        <div class="feature-num">01</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="4" y="10" width="14" height="20" rx="2"/>
-          <rect x="22" y="10" width="14" height="20" rx="2"/>
-          <path d="M8 24V18l3-4 3 6 2-3 3 7" stroke-width="1.2"/>
-          <path d="M26 24V18l3-4 3 6 2-3 3 7" stroke-width="1.2"/>
-        </svg>
-        <div class="feature-title">Console Modes</div>
-        <div class="feature-desc">12 signal processing modes: from Reference and Dim to Car Sim, Phone Sim, and Crossfeed. Tap once to engage. Tap again to instantly A/B against your unprocessed source.</div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-num">02</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="4" y="16" width="32" height="8" rx="1"/>
-          <rect x="7" y="18.5" width="3" height="3" fill="currentColor" opacity="0.3"/>
-          <rect x="11" y="18.5" width="3" height="3" fill="currentColor" opacity="0.45"/>
-          <rect x="15" y="18.5" width="3" height="3" fill="currentColor" opacity="0.6"/>
-          <rect x="19" y="18.5" width="3" height="3" fill="currentColor" opacity="0.75"/>
-          <rect x="23" y="18.5" width="3" height="3" fill="currentColor" opacity="0.9"/>
-          <rect x="27" y="18.5" width="3" height="3" fill="currentColor"/>
-          <rect x="31" y="18.5" width="2" height="3" fill="#e83020"/>
-        </svg>
-        <div class="feature-title">Professional Metering</div>
-        <div class="feature-desc">A swipeable suite of 9 displays: Waveform, Digital VU, Analog VU, Spectrum Analyzer, Loudness (LUFS), Stereo Field, Oscilloscope, Phase Correlation, and Projector.</div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-num">03</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M20 6 L20 26"/>
-          <path d="M13 13 L20 6 L27 13"/>
-          <rect x="8" y="26" width="24" height="10" rx="2"/>
-          <path d="M14 31 h4 M22 31 h4" stroke-width="1" opacity="0.5"/>
-        </svg>
-        <div class="feature-title">Render &amp; Share</div>
-        <div class="feature-desc">Activate any console mode and export a full-quality processed version with your settings baked in. WAV, AIFF, or AAC. Send via AirDrop, Dropbox, or Messages.</div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-num">04</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="20" cy="14" r="8"/>
-          <path d="M7 34 C7 27 33 27 33 34" stroke-width="1.5"/>
-          <path d="M16 14 l3 3 5-5" stroke-width="1.8" stroke="currentColor"/>
-        </svg>
-        <div class="feature-title">Cloud Sources</div>
-        <div class="feature-desc">Connect Dropbox and everything you drop into your Signal Desk Pro folder syncs automatically — subfolders included. Signal Desk Pro detects new tracks, updates, and deletions. Import from Google Drive or local files with a picker.</div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-num">05</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="6" y="8" width="28" height="6" rx="1.5"/>
-          <rect x="6" y="18" width="28" height="6" rx="1.5"/>
-          <rect x="6" y="28" width="18" height="6" rx="1.5"/>
-          <circle cx="30" cy="31" r="5" fill="var(--amber)" stroke="none" opacity="0.15"/>
-          <path d="M27 31 l2 2 4-4" stroke="var(--amber)" stroke-width="1.5"/>
-        </svg>
-        <div class="feature-title">Library &amp; Playlists</div>
-        <div class="feature-desc">Organize your sessions into named playlists. Filter by source, format, or folder. Your full reference catalog, always at hand.</div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-num">06</div>
-        <svg class="feature-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="20" cy="20" r="13"/>
-          <path d="M14 20 c0-3.3 2.7-6 6-6 s6 2.7 6 6 -2.7 6-6 6" opacity="0.4"/>
-          <path d="M9 20 c0-6.1 4.9-11 11-11 s11 4.9 11 11" opacity="0.2"/>
-          <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
-        </svg>
-        <div class="feature-title">Free to Start</div>
-        <div class="feature-desc">Download free and start listening immediately. Upgrade to Professional for advanced console modes and meters. Monthly, annual, or lifetime. You choose.</div>
-      </div>
-
     </div>
   </section>
 
-  <div class="feat-carousel">
-
-  <div class="section-divider feat-carousel__divider"></div>
-
-  <!-- SECTION 1: CONSOLE MODES -->
-  <div class="feat-section" id="console">
-    <div>
-      <div class="section-tag">Console Modes</div>
-      <h2>Hear How<br>It <em>Translates</em></h2>
-      <p class="section-desc">Your mix on every speaker. Before it's too late. Toggle any console mode to hear exactly how your mix will sound in the real world. Tap once to engage. Tap again to instantly A/B against your unprocessed source.</p>
-    </div>
-    <div>
-      <div class="illus-panel">
-        <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="illus-tag">Console Mode</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em; color:var(--amber); border:1px solid var(--amber-dim); border-radius:2px; padding:3px 8px;">A / B</div>
+  <!-- 2 · CONSOLE (peak) -->
+  <section class="console" id="console" aria-labelledby="h-console">
+    <div class="console__grid">
+      <div class="console__copy">
+        <p class="lbl">Console <b>· 12 modes</b></p>
+        <h2 id="h-console">Press a key. Hear what it does.</h2>
+        <p>Every mix ends up somewhere you didn't mix it: a car, a phone speaker, one earbud. In the app, Signal Desk runs your track through those places. Tap a mode to engage it. Tap it again to A/B against the source.</p>
+        <p style="margin-top:1rem">Try them here with the test loop. Mono pulls the clav and the synth lead into the middle. Phone Sim takes the bass out. L/R Flip swaps the clav and the hi-hats.</p>
+        <div class="mini-vu" aria-hidden="true">
+          <span>L</span><div class="mini-vu__track"><div class="mini-vu__bar" id="mvL"></div></div>
+          <span>R</span><div class="mini-vu__track"><div class="mini-vu__bar" id="mvR"></div></div>
         </div>
-        <!-- Active mode display -->
-        <div style="text-align:center; padding:0;">
-          <div id="console-mode-name" style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:27px; letter-spacing:0.06em; color:var(--amber); text-shadow:0 0 40px rgba(232,130,12,0.4); line-height:1; text-transform:uppercase;">CAR SIM</div>
-          <div id="console-mode-status" style="font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.14em; color:var(--muted); margin-top:4px;">ACTIVE · TAP TO BYPASS</div>
+      </div>
+      <div class="console__deck panel">
+        <div class="keys" id="keys" role="group" aria-label="Console modes">
+          <div class="keys__group"><span class="lbl">Free</span><span class="lbl">Tap again to A/B</span></div>
+          <button class="key" data-mode="stereo" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg><span>Reference</span></button>
+          <button class="key" data-mode="swap" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>L/R Flip</span></button>
+          <button class="key" data-mode="mono" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="5"/></svg><span>Mono</span></button>
+          <button class="key" data-mode="dim" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/></svg><span>Dim</span></button>
+          <div class="keys__group"><span class="lbl">Pro</span><span class="lbl" id="demo-note"></span></div>
+          <button class="key" data-mode="msflip" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg><span>M/S Flip</span></button>
+          <button class="key" data-mode="bassmono" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15c3 0 3-6 6-6s3 6 6 6 3-3 6-3"/></svg><span>Bass Mono</span></button>
+          <button class="key" data-mode="width" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span>Width</span></button>
+          <button class="key" data-mode="pitch" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 18l5-6 4 3 7-9"/></svg><span>Pitch</span></button>
+          <button class="key" data-mode="time" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>Time</span></button>
+          <button class="key" data-mode="carsim" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15l2-5h12l2 5v3H4z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/></svg><span>Car Sim</span></button>
+          <button class="key" data-mode="phonesim" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg><span>Phone Sim</span></button>
+          <button class="key" data-mode="xfeed" data-tier="pro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 6l14 12M19 6L5 18"/></svg><span>Crossfeed</span></button>
         </div>
-        <!-- Before / After waveforms -->
-        <div style="display:grid; grid-template-columns:1fr 14px 1fr; gap:6px; align-items:end;">
-          <div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:0.12em; color:var(--muted); margin-bottom:3px; text-align:center;">SOURCE</div>
-            <div style="height:26px; background:var(--surface); border:1px solid var(--border); border-radius:2px; overflow:hidden;">
-              <svg viewBox="0 0 80 36" preserveAspectRatio="none" width="100%" height="100%">
-                <polyline points="0,18 4,12 8,6 12,22 16,8 20,26 24,10 28,28 32,6 36,20 40,10 44,26 48,4 52,22 56,12 60,26 64,8 68,20 72,14 76,24 80,18" fill="none" stroke="#5a5248" stroke-width="1.3"/>
-              </svg>
-            </div>
-          </div>
-          <div style="text-align:center; color:var(--amber); font-size:11px; opacity:0.45; padding-bottom:4px;">›</div>
-          <div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:6px; letter-spacing:0.12em; color:var(--amber); margin-bottom:3px; text-align:center; opacity:0.7;">PROCESSED</div>
-            <div style="height:26px; background:var(--surface); border:1px solid var(--border); border-radius:2px; overflow:hidden;">
-              <svg viewBox="0 0 80 36" preserveAspectRatio="none" width="100%" height="100%">
-                <polyline points="0,18 4,15 8,12 12,21 16,13 20,22 24,14 28,23 32,11 36,19 40,14 44,22 48,10 52,20 56,15 60,22 64,13 68,19 72,16 76,21 80,18" fill="none" stroke="#e8820c" stroke-width="1.3" opacity="0.8"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        <!-- Divider -->
-        <div style="height:1px; background:var(--border);"></div>
-        <!-- Mode grid -->
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:3px;">
-
-          <!-- REF -->
-          <div class="illus-btn" data-mode="REFERENCE">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1,8 Q4,2 7.5,8 Q11,14 15,8"/>
-            </svg>
-            <span>REF</span>
-          </div>
-
-          <!-- L/R -->
-          <div class="illus-btn" data-mode="L/R FLIP">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="2" y1="5.5" x2="12" y2="5.5"/>
-              <polyline points="10,3.5 12,5.5 10,7.5"/>
-              <line x1="14" y1="10.5" x2="4" y2="10.5"/>
-              <polyline points="6,8.5 4,10.5 6,12.5"/>
-            </svg>
-            <span>L/R</span>
-          </div>
-
-          <!-- MONO -->
-          <div class="illus-btn" data-mode="MONO">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
-              <circle cx="8" cy="8" r="4.5"/>
-              <circle cx="8" cy="8" r="1.8" fill="currentColor" stroke="none"/>
-            </svg>
-            <span>MONO</span>
-          </div>
-
-          <!-- DIM -->
-          <div class="illus-btn" data-mode="DIM">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="3" x2="8" y2="11"/>
-              <polyline points="5.5,8.5 8,11 10.5,8.5"/>
-              <line x1="5" y1="13.5" x2="11" y2="13.5"/>
-            </svg>
-            <span>DIM</span>
-          </div>
-
-          <!-- M/S -->
-          <div class="illus-btn" data-mode="M/S FLIP">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
-              <rect x="5.5" y="3" width="5" height="10" rx="0.8" fill="currentColor" stroke="none" opacity="0.65"/>
-              <rect x="1" y="5.5" width="3.5" height="5" rx="0.8"/>
-              <rect x="11.5" y="5.5" width="3.5" height="5" rx="0.8"/>
-            </svg>
-            <span>M/S</span>
-          </div>
-
-          <!-- BASS M -->
-          <div class="illus-btn" data-mode="BASS MONO">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
-              <path d="M1,11 Q4.5,3 8,11 Q11.5,3 15,11"/>
-              <circle cx="8" cy="5" r="1.5" fill="currentColor" stroke="none"/>
-            </svg>
-            <span>BASS M</span>
-          </div>
-
-          <!-- WIDTH -->
-          <div class="illus-btn" data-mode="WIDTH">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="1" y1="8" x2="5" y2="8"/>
-              <polyline points="3,6 1,8 3,10"/>
-              <line x1="15" y1="8" x2="11" y2="8"/>
-              <polyline points="13,6 15,8 13,10"/>
-              <line x1="6.5" y1="8" x2="9.5" y2="8" stroke-width="0.7" opacity="0.4"/>
-            </svg>
-            <span>WIDTH</span>
-          </div>
-
-          <!-- PITCH -->
-          <div class="illus-btn" data-mode="PITCH">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="13" x2="8" y2="4"/>
-              <polyline points="5.5,6.5 8,4 10.5,6.5"/>
-              <line x1="5" y1="10.5" x2="11" y2="10.5" stroke-width="0.8" opacity="0.5"/>
-            </svg>
-            <span>PITCH</span>
-          </div>
-
-          <!-- TIME -->
-          <div class="illus-btn" data-mode="TIME">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round">
-              <circle cx="8" cy="8.5" r="5.5"/>
-              <line x1="8" y1="8.5" x2="8" y2="5"/>
-              <line x1="8" y1="8.5" x2="11.5" y2="9.5"/>
-            </svg>
-            <span>TIME</span>
-          </div>
-
-          <!-- CAR SIM (active) -->
-          <div class="illus-btn on" data-mode="CAR SIM">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1.5,10 L1.5,8 L4.5,5.5 L11.5,5.5 L14.5,8 L14.5,10"/>
-              <line x1="1.5" y1="10" x2="3" y2="10"/>
-              <line x1="6" y1="10" x2="10" y2="10"/>
-              <line x1="13" y1="10" x2="14.5" y2="10"/>
-              <circle cx="4.5" cy="11.5" r="1.5"/>
-              <circle cx="11.5" cy="11.5" r="1.5"/>
-              <path d="M4.5,5.5 L6,3 L10,3 L11.5,5.5" stroke-width="1"/>
-            </svg>
-            <span>CAR SIM</span>
-          </div>
-
-          <!-- PHONE -->
-          <div class="illus-btn" data-mode="PHONE SIM">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5.5,2.5 L7,2.5 L7.5,5.5 L6,6.5 C7,8 8,9 9.5,9.5 L10.5,8 L13.5,8.5 L13.5,10 C10.5,13.5 3.5,9 3.5,5.5 Z"/>
-            </svg>
-            <span>PHONE</span>
-          </div>
-
-          <!-- XFEED -->
-          <div class="illus-btn" data-mode="CROSSFEED">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3,11.5 L3,9 C3,6 5,4 8,4 C11,4 13,6 13,9 L13,11.5"/>
-              <rect x="1.5" y="10.5" width="3" height="4" rx="1"/>
-              <rect x="11.5" y="10.5" width="3" height="4" rx="1"/>
-              <line x1="6" y1="10.5" x2="10" y2="13.5"/>
-              <line x1="6" y1="13.5" x2="10" y2="10.5"/>
-            </svg>
-            <span>XFEED</span>
-          </div>
-
+        <div class="readout" aria-live="polite">
+          <div class="readout__mode" id="ro-mode">REFERENCE</div>
+          <div class="readout__desc" id="ro-desc">The track as bounced. Every other mode is measured against this.</div>
+          <div class="readout__state" id="ro-state">Signal off. Press Power on to listen.</div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="section-divider feat-carousel__divider"></div>
-
-  <!-- SECTION 2: METERS -->
-  <div class="feat-section flip" id="meters">
-    <div>
-      <div class="section-tag">Metering Suite</div>
-      <h2>See Your<br><em>Audio</em></h2>
-      <p class="section-desc">Professional metering. No studio required. A swipeable suite of meters gives you the visual analysis tools of a professional studio. In your pocket. From analog VU needles to EBU R128 loudness to a real-time stereo vectorscope — and Projector, a Milkdrop-class visualizer driven by your own track.</p>
-    </div>
-    <div>
-      <div class="illus-panel">
-        <div class="illus-tag">Metering Suite</div>
-        <!-- Dual analog VU gauges -->
-        <div style="display:flex; gap:10px; flex:1; align-items:center;">
-          <!-- Left gauge -->
-          <svg viewBox="0 0 100 82" style="flex:1; overflow:visible;" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="vgC" cx="50%" cy="80%" r="68%">
-                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
-                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
-                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <rect width="100" height="82" rx="3" fill="#131109"/>
-            <rect width="100" height="82" rx="3" fill="url(#vgC)"/>
-            <!-- Arc: center (50,72), r=40, from θ=-75° to θ=+75° (CW = sweep=1) -->
-            <path d="M 11.4 61.7 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#1a1610" stroke-width="4"/>
-            <path d="M 11.4 61.7 A 40 40 0 0 1 73.5 39.6" fill="none" stroke="#3ecf60" stroke-width="4" opacity="0.4"/>
-            <path d="M 73.5 39.6 A 40 40 0 0 1 82.8 49.1" fill="none" stroke="#e8d020" stroke-width="4" opacity="0.4"/>
-            <path d="M 82.8 49.1 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#e83020" stroke-width="4" opacity="0.4"/>
-            <!-- Tick marks -->
-            <line x1="11.4" y1="61.7" x2="17.5" y2="63.2" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="43.1" y1="32.6" x2="44.2" y2="38.5" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="73.5" y1="39.6" x2="70.0" y2="44.8" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="82.8" y1="49.1" x2="77.9" y2="52.8" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
-            <line x1="88.6" y1="61.7" x2="82.5" y2="63.2" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
-            <!-- Needle (pivots at 50,72; tip at 50,34 when rotation=0) -->
-            <line x1="50" y1="72" x2="50" y2="34" stroke="#e8e0d0" stroke-width="1.4" stroke-linecap="round">
-              <animateTransform attributeName="transform" type="rotate"
-                values="16 50 72; 24 50 72; 8 50 72; 27 50 72; 6 50 72; 19 50 72; 12 50 72; 22 50 72; 16 50 72"
-                keyTimes="0;0.12;0.28;0.45;0.58;0.70;0.82;0.92;1"
-                dur="3.2s" repeatCount="indefinite"
-                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
-            </line>
-            <!-- Pivot -->
-            <circle cx="50" cy="72" r="3" fill="#e8820c"/>
-            <circle cx="50" cy="72" r="1.3" fill="#131109"/>
-            <!-- Labels -->
-            <text x="50" y="11" text-anchor="middle" fill="#5a5248" font-size="8" font-family="monospace" letter-spacing="3">L</text>
-            <text x="6" y="70" text-anchor="middle" fill="#2a2620" font-size="5.5" font-family="monospace">-20</text>
-            <text x="94" y="70" text-anchor="middle" fill="#e83020" font-size="5.5" font-family="monospace" opacity="0.6">+3</text>
-            <text x="50" y="57" text-anchor="middle" fill="#c8bfb0" font-size="9" font-family="monospace">-6.1</text>
-            <text x="50" y="67" text-anchor="middle" fill="#3a3020" font-size="5.5" font-family="monospace">dBVU</text>
-          </svg>
-          <!-- Right gauge -->
-          <svg viewBox="0 0 100 82" style="flex:1; overflow:visible;" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="vgD" cx="50%" cy="80%" r="68%">
-                <stop offset="0%" stop-color="#c87818" stop-opacity="0.18"/>
-                <stop offset="55%" stop-color="#a05c10" stop-opacity="0.07"/>
-                <stop offset="100%" stop-color="#c87818" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <rect width="100" height="82" rx="3" fill="#131109"/>
-            <rect width="100" height="82" rx="3" fill="url(#vgD)"/>
-            <path d="M 11.4 61.7 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#1a1610" stroke-width="4"/>
-            <path d="M 11.4 61.7 A 40 40 0 0 1 73.5 39.6" fill="none" stroke="#3ecf60" stroke-width="4" opacity="0.4"/>
-            <path d="M 73.5 39.6 A 40 40 0 0 1 82.8 49.1" fill="none" stroke="#e8d020" stroke-width="4" opacity="0.4"/>
-            <path d="M 82.8 49.1 A 40 40 0 0 1 88.6 61.7" fill="none" stroke="#e83020" stroke-width="4" opacity="0.4"/>
-            <line x1="11.4" y1="61.7" x2="17.5" y2="63.2" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="43.1" y1="32.6" x2="44.2" y2="38.5" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="73.5" y1="39.6" x2="70.0" y2="44.8" stroke="#2a2620" stroke-width="0.8"/>
-            <line x1="82.8" y1="49.1" x2="77.9" y2="52.8" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
-            <line x1="88.6" y1="61.7" x2="82.5" y2="63.2" stroke="#e83020" stroke-width="0.8" opacity="0.5"/>
-            <line x1="50" y1="72" x2="50" y2="34" stroke="#e8e0d0" stroke-width="1.4" stroke-linecap="round">
-              <animateTransform attributeName="transform" type="rotate"
-                values="14 50 72; 26 50 72; 10 50 72; 22 50 72; 5 50 72; 20 50 72; 15 50 72; 25 50 72; 14 50 72"
-                keyTimes="0;0.10;0.25;0.42;0.56;0.68;0.80;0.92;1"
-                dur="2.9s" repeatCount="indefinite"
-                calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
-            </line>
-            <circle cx="50" cy="72" r="3" fill="#e8820c"/>
-            <circle cx="50" cy="72" r="1.3" fill="#131109"/>
-            <text x="50" y="11" text-anchor="middle" fill="#5a5248" font-size="8" font-family="monospace" letter-spacing="3">R</text>
-            <text x="6" y="70" text-anchor="middle" fill="#2a2620" font-size="5.5" font-family="monospace">-20</text>
-            <text x="94" y="70" text-anchor="middle" fill="#e83020" font-size="5.5" font-family="monospace" opacity="0.6">+3</text>
-            <text x="50" y="57" text-anchor="middle" fill="#c8bfb0" font-size="9" font-family="monospace">-5.9</text>
-            <text x="50" y="67" text-anchor="middle" fill="#3a3020" font-size="5.5" font-family="monospace">dBVU</text>
-          </svg>
+  <!-- 3 · METERS (pan) -->
+  <section id="meters" data-sc-act="pin" data-sc-span="3" aria-labelledby="h-meters">
+    <div data-sc-stage class="meters__stage">
+      <div class="meters__head">
+        <div>
+          <p class="lbl">Meters <b>· 9 displays</b></p>
+          <h2 class="sec-h" id="h-meters">Nine ways to read one signal.</h2>
         </div>
-        <!-- Meter type tabs -->
-        <div style="height:1px; background:var(--border);"></div>
-        <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">WAVEFORM</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">DIGITAL VU</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--amber); color:var(--black); font-weight:700; letter-spacing:0.08em;">ANALOG VU</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">SPECTRUM</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">LOUDNESS</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">STEREO FIELD</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">OSCILLOSCOPE</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">PHASE CORRELATION</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:7.5px; padding:5px 8px; border-radius:2px; background:var(--surface); border:1px solid var(--border); color:var(--muted); letter-spacing:0.08em;">PROJECTOR</div>
-        </div>
+        <p>Swipe between them while the track plays. Analog VU, Digital VU and Waveform are free. The rest come with Pro. The marked displays below run on this page's test loop.</p>
+      </div>
+      <div class="rail" id="rail">
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-wave" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Waveform <small>FREE</small></h3><p>The whole track at a glance. Tap anywhere to jump there.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-dig" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Digital VU <small>FREE</small></h3><p>Sample-peak dBFS per channel, with a two-second peak hold.</p></article>
+        <article class="meter panel"><div class="meter__screen"><img src="screenshots/screen1.png" alt="Analog VU meters in the app" loading="lazy" style="object-position:50% 9%"></div><h3>Analog VU <small>FREE</small></h3><p>Two amber needles with real VU ballistics. The display on the faceplate above.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-spec" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Spectrum <small>PRO</small></h3><p>Where the energy sits, from sub to air.</p></article>
+        <article class="meter panel"><div class="meter__screen"><svg viewBox="0 0 280 210" aria-hidden="true"><g font-family="JetBrains Mono, monospace" fill="#a59c8c" font-size="10"><text x="20" y="40">MOMENTARY</text><text x="20" y="98">SHORT-TERM</text><text x="20" y="156">INTEGRATED</text></g><g font-family="Archivo, sans-serif" font-weight="700" font-size="26" fill="#ece5d8"><text x="20" y="68">LUFS</text><text x="20" y="126">LUFS</text><text x="20" y="184">LUFS</text></g><g font-family="JetBrains Mono, monospace" font-size="10" fill="#e39a3b" text-anchor="end"><text x="260" y="40">−14</text><text x="260" y="58">−16</text><text x="260" y="76">−23</text></g><text x="260" y="186" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#7d7466">TRUE PEAK dBTP</text></svg></div><h3>Loudness <small>PRO</small></h3><p>EBU R128 momentary, short-term and integrated LUFS, plus true-peak max. Reference lines at −14, −16 or −23.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-field" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Stereo Field <small>PRO</small></h3><p>A mid/side scope with a correlation readout. Width you can see.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-scope" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Oscilloscope <small>PRO</small></h3><p>A vintage-style scope trace of the waveform itself.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-corr" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Phase Correlation <small>PRO</small></h3><p>From −1 to +1. Shows when the mix will cancel in mono.</p></article>
+        <article class="meter panel"><div class="meter__screen"><canvas id="cv-proj" width="560" height="420"></canvas><span class="meter__live">LIVE</span></div><h3>Projector <small>PRO</small></h3><p>A full-screen visualizer driven by your track. Turn the phone sideways. Tap to change the preset.</p></article>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="section-divider feat-carousel__divider"></div>
-
-  <!-- SECTION 3: CLOUD SOURCES -->
-  <div class="feat-section">
-    <div>
-      <div class="section-tag">Cloud Sources</div>
-      <h2>Your Catalog,<br>Always <em>With You</em></h2>
-      <p class="section-desc">Connect Dropbox and Signal Desk Pro creates a single folder for you. Drop tracks in and they sync automatically, with new files, updated versions, and deletions detected on their own. Subfolders work too, and an image dropped into a folder becomes the cover art for the tracks inside it. Every sync opens a review screen grouped by folder, so you choose what lands in your library — anything you skip is offered again next time. Google Drive and local files import through a picker.</p>
-    </div>
-    <div>
-      <div class="illus-panel">
-        <div class="illus-tag">Connect a Source</div>
-        <div style="font-family:'Barlow',sans-serif; font-size:13px; font-weight:300; color:var(--mid); line-height:1.5;">Link a cloud folder to start listening. You can add more later.</div>
-        <!-- Source rows -->
-        <div style="display:flex; flex-direction:column; gap:7px; flex:1; justify-content:center;">
-          <!-- Dropbox -->
-          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:var(--surface); border:1px solid var(--border); border-radius:3px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
-              <path d="M12 6.5L6 10l6 3.5L6 17l-6-3.5L6 10 0 6.5 6 3l6 3.5z" fill="#0061FF" opacity="0.8"/>
-              <path d="M12 6.5L18 3l6 3.5-6 3.5L12 6.5zm0 7L6 17l6 3.5 6-3.5L12 13.5z" fill="#0061FF" opacity="0.5"/>
-            </svg>
-            <div style="flex:1;">
-              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--text); letter-spacing:0.06em;">Dropbox</div>
-              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); margin-top:1px;">Syncs your Signal Desk Pro folder</div>
-            </div>
-            <div style="width:14px; height:14px; border-radius:50%; border:1px solid var(--border2);"></div>
-          </div>
-          <!-- Google Drive - connected -->
-          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:rgba(232,130,12,0.06); border:1px solid var(--amber-dim); border-radius:3px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
-              <path d="M7.5 14L2 22h20L17 14H7.5z" fill="#FBBC04" opacity="0.8"/>
-              <path d="M12 2L7.5 14H17L12 2z" fill="#4285F4" opacity="0.8"/>
-              <path d="M2 22l5-8.6L12 2 7.5 14 2 22z" fill="#34A853" opacity="0.7"/>
-            </svg>
-            <div style="flex:1;">
-              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--amber); letter-spacing:0.06em;">Google Drive</div>
-              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--amber); margin-top:1px; opacity:0.7;">Connected</div>
-            </div>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="7" fill="#e8820c"/>
-              <path d="M4 7l2 2 4-4" stroke="#080807" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <!-- iCloud -->
-          <div style="display:flex; align-items:center; gap:10px; padding:11px 13px; background:var(--surface); border:1px solid var(--border); border-radius:3px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
-              <path d="M17.5 9.5C17.5 7 15.5 5 13 5c-1.9 0-3.5 1.1-4.3 2.7C7.9 7.3 7.0 7 6 7c-2.2 0-4 1.8-4 4s1.8 4 4 4h11.5c1.9 0 3.5-1.6 3.5-3.5s-1.6-2-3.5-2z" fill="#3478F6" opacity="0.7"/>
-            </svg>
-            <div style="flex:1;">
-              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; color:var(--text); letter-spacing:0.06em;">iCloud Drive</div>
-              <div style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); margin-top:1px;">Import files with a picker</div>
-            </div>
-            <div style="width:14px; height:14px; border-radius:50%; border:1px solid var(--border2);"></div>
-          </div>
+  <!-- 4 · SOURCES (pinned sync log) -->
+  <section id="sources" data-sc-act="pin" data-sc-span="2.2" aria-labelledby="h-sources">
+    <div data-sc-stage class="sync__stage">
+      <div class="sync__copy">
+        <p class="lbl">Sources</p>
+        <h2 class="sec-h" id="h-sources">Bounce to Dropbox. It's on your phone.</h2>
+        <p class="prose">Link one Dropbox folder and Signal Desk keeps it in sync, subfolders included. New bounces come in, revisions are matched to the track they replace, and nothing is overwritten until you approve it. Synced tracks play offline.</p>
+        <div class="src-list">
+          <div><h3>Dropbox</h3><p>A dedicated app folder, kept in sync. An image in a folder becomes that playlist's cover art.</p></div>
+          <div><h3>Google Drive and Files</h3><p>Import from Google Drive, iCloud Drive or anything else in the iOS Files picker. No Google sign-in.</p></div>
         </div>
-        <!-- CTA -->
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.12em; text-align:center; padding:13px; background:var(--amber); border-radius:3px; color:var(--black);">COMING SOON ON <span style="text-transform:none;">i</span>OS</div>
+      </div>
+      <div class="log panel" role="log" aria-label="Example sync session">
+        <div class="log__head"><span>Dropbox › Apps › Signal Desk Pro</span><span>Example</span></div>
+        <ol>
+          <li data-sc-cue="0.02"><span class="t">09:41</span><span class="f">Harbor Lights/Saltwater_MIX_v09.wav</span><span class="s">synced</span></li>
+          <li data-sc-cue="0.14"><span class="t">09:41</span><span class="f">Harbor Lights/Undertow_mix3_24b.aiff</span><span class="s">synced</span></li>
+          <li data-sc-cue="0.26"><span class="t">09:42</span><span class="f">Harbor Lights/cover.jpg</span><span class="s">cover art</span></li>
+          <li data-sc-cue="0.40"><span class="t">11:07</span><span class="f">Harbor Lights/Saltwater_MIX_v10_vocal_up.wav</span><span class="s ask">update? review</span></li>
+          <li data-sc-cue="0.54"><span class="t">11:08</span><span class="f">Refs/Kessler_Night_Drive_REF.mp3</span><span class="s new">new</span></li>
+          <li data-sc-cue="0.68"><span class="t">11:08</span><span class="f">Harbor Lights/Undertow_mix2_24b.aiff</span><span class="s">removed</span></li>
+        </ol>
+        <p class="log__foot" data-sc-cue="0.8">2 changes waiting. Choose what to bring in. Skipped items stay on the list until you decide.</p>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="section-divider feat-carousel__divider"></div>
-
-  <!-- CONSOLE MODES + METERS LIST -->
-  <div class="modes-section">
-    <div class="modes-inner">
-      <div>
-        <div class="section-tag">Console Modes</div>
-        <h2>Every<br><em>Mode</em></h2>
-        <div class="modes-list">
-          <div class="mode-item">Reference <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">L/R Flip <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">Mono <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">Dim <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">M/S Flip <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Bass Mono <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Width <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Pitch <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Time <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Car Sim <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Phone Sim <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Crossfeed <span class="mode-tier">PRO</span></div>
-        </div>
+  <!-- 5 · EXPORT + LIBRARY -->
+  <section class="take" id="export" data-sc-act="flow" aria-labelledby="h-take">
+    <div class="take__grid">
+      <div class="phones">
+        <figure class="ph ph--a"><div class="phone"><img src="screenshots/screen1.png" width="1206" height="2622" alt="Now Playing: an AIFF from Dropbox on the analog VU meters with the console row below" loading="lazy"></div><figcaption class="lbl">Now Playing</figcaption></figure>
+        <figure class="ph ph--b"><div class="phone"><img src="screenshots/screen2.png" width="1206" height="2622" alt="Stereo Field meter with the Width control set to 100 percent" loading="lazy"></div><figcaption class="lbl">Stereo Field</figcaption></figure>
       </div>
       <div>
-        <div class="section-tag">Meters</div>
-        <h2>Every<br><em>View</em></h2>
-        <div class="modes-list">
-          <div class="mode-item">Waveform <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">Digital VU <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">Analog VU <span class="mode-tier free">FREE</span></div>
-          <div class="mode-item">Spectrum Analyzer <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Loudness (LUFS + true peak) <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Stereo Field <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Oscilloscope <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Phase Correlation <span class="mode-tier">PRO</span></div>
-          <div class="mode-item">Projector <span class="mode-tier">PRO</span></div>
-        </div>
-
-        <div class="mini-vu" style="margin-top:32px;">
-          <div class="mini-vu-label">LEVEL MONITOR — LIVE</div>
-          <div class="mini-vu-bar" id="mini-vu-l"></div>
-          <div class="mini-vu-bar" id="mini-vu-r"></div>
-        </div>
+        <p class="lbl">Library <b>· Export</b></p>
+        <h2 class="sec-h" id="h-take">Take any track with you, in the format you need.</h2>
+        <p class="prose">Export any track as WAV, AIFF or AAC, then send it through the share sheet to AirDrop, Dropbox or Messages. Playlists get their own cover art from your camera or photo library. Playback continues in the background, with artwork on the lock screen, in Control Center and in CarPlay.</p>
+        <dl class="specs">
+          <div><dt class="lbl">Plays</dt><dd>WAV, AIFF, FLAC, MP3, AAC / M4A</dd></div>
+          <div><dt class="lbl">Exports</dt><dd>24-bit WAV, 24-bit AIFF, AAC</dd></div>
+          <div><dt class="lbl">Playback</dt><dd>Loop, shuffle, 2-second crossfade loop</dd></div>
+          <div><dt class="lbl">Library</dt><dd>Filter by source and format, custom playlists</dd></div>
+          <div><dt class="lbl">Requires</dt><dd>iPhone, iOS 15.1 or later</dd></div>
+          <div><dt class="lbl">Privacy</dt><dd>No analytics. Your audio stays on your device.</dd></div>
+        </dl>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- RENDER & SHARE -->
-  <div class="feat-section flip">
-    <div>
-      <div class="section-tag">Render &amp; Share</div>
-      <h2>Like What<br>You Hear?<br><em>Export It.</em></h2>
-      <p class="section-desc">Activate any console mode and tap the share icon to render a full-quality processed version of your track, with your settings baked in. Export as WAV, AIFF, or AAC and send it anywhere via AirDrop, Dropbox, or Messages.</p>
-    </div>
-    <div>
-      <div class="illus-panel">
-        <div class="illus-tag">Render &amp; Share</div>
-        <!-- Track being exported -->
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:11px 13px;">
-          <div style="font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:15px; color:var(--bright); letter-spacing:0.02em;">Late Bloom_v1.3</div>
-          <div style="display:flex; gap:8px; margin-top:5px; align-items:center;">
-            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--amber); border:1px solid var(--amber-dim); padding:2px 6px; border-radius:2px; letter-spacing:0.08em;">PITCH</span>
-            <span style="font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">mode active · processed</span>
-          </div>
-          <!-- Waveform -->
-          <div style="height:30px; margin-top:8px; overflow:hidden;">
-            <svg viewBox="0 0 200 30" preserveAspectRatio="none" width="100%" height="100%">
-              <defs>
-                <linearGradient id="wg" x1="0" x2="1" y1="0" y2="0">
-                  <stop offset="0%" stop-color="#e8820c" stop-opacity="0.3"/>
-                  <stop offset="45%" stop-color="#e8820c" stop-opacity="0.8"/>
-                  <stop offset="45%" stop-color="#e8820c" stop-opacity="0.8"/>
-                  <stop offset="100%" stop-color="#e8820c" stop-opacity="0.2"/>
-                </linearGradient>
-              </defs>
-              <polyline points="0,15 5,10 10,5 15,18 20,8 25,20 30,6 35,22 40,4 45,19 50,9 55,21 60,5 65,18 70,11 75,22 80,7 85,20 90,13 95,23 100,6 105,19 110,12 115,22 120,8 125,21 130,10 135,24 140,7 145,19 150,13 155,21 160,9 165,20 170,14 175,23 180,10 185,20 190,15 195,18 200,15" fill="none" stroke="url(#wg)" stroke-width="1.2"/>
-            </svg>
-          </div>
-        </div>
-        <!-- Format selector -->
+  <!-- 6 · PLANS -->
+  <section class="plans" id="plans" aria-labelledby="h-plans">
+    <div class="plans__wrap">
+      <p class="lbl">Plans</p>
+      <h2 class="sec-h" id="h-plans">Free to check a mix. Pro to hear it every way.</h2>
+      <div class="plans__row">
+        <div class="plan"><span class="lbl">Free</span><div class="plan__price">$0</div><p>Reference, L/R Flip, Mono and Dim. Waveform, Digital VU and Analog VU. Every source, every export.</p></div>
+        <div class="plan"><span class="lbl">Pro · Monthly</span><div class="plan__price">$4.99<small> / mo</small></div><p>Everything, renewed monthly.</p></div>
+        <div class="plan plan--lit"><span class="lbl" style="color:var(--sc-accent)">Pro · Annual</span><div class="plan__price">$29.99<small> / yr</small></div><p>About $2.50 a month. The best value.</p></div>
+        <div class="plan"><span class="lbl">Pro · Lifetime</span><div class="plan__price">$99<small> once</small></div><p>Pay once. Yours for good.</p></div>
+      </div>
+      <div class="compare">
         <div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.18em; color:var(--muted); margin-bottom:7px;">EXPORT FORMAT</div>
-          <div style="display:flex; gap:6px;">
-            <div style="flex:1; padding:11px 6px; background:rgba(232,130,12,0.1); border:1px solid var(--amber-dim); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--amber);">WAV</div>
-            <div style="flex:1; padding:11px 6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--muted);">AIFF</div>
-            <div style="flex:1; padding:11px 6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--muted);">AAC</div>
-          </div>
+          <p class="lbl">Pro adds eight console modes</p>
+          <ul><li>M/S Flip, Bass Mono, Width <span>· stereo image</span></li><li>Pitch, Time <span>· change one without the other</span></li><li>Car Sim, Phone Sim, Crossfeed <span>· real-world playback</span></li></ul>
         </div>
-        <!-- Share via -->
         <div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.18em; color:var(--muted); margin-bottom:7px;">SEND VIA</div>
-          <div style="display:flex; gap:6px;">
-            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">AIRDROP</div>
-            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">DROPBOX</div>
-            <div style="flex:1; padding:8px 4px; background:var(--surface); border:1px solid var(--border); border-radius:3px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:0.06em;">MESSAGES</div>
-          </div>
+          <p class="lbl">And six meters</p>
+          <ul><li>Spectrum, Loudness <span>· LUFS and true peak</span></li><li>Stereo Field, Phase Correlation <span>· mono safety</span></li><li>Oscilloscope, Projector <span>· the fun ones</span></li></ul>
         </div>
-        <!-- Export button -->
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:0.12em; text-align:center; padding:13px; background:var(--amber); border-radius:3px; color:var(--black); margin-top:auto;">RENDER &amp; SHARE</div>
       </div>
+      <p class="fineprint">Purchased in the app through Apple. Monthly and annual plans renew automatically; cancel any time in your App Store settings. Lifetime is a one-time purchase. Prices are in US dollars and may vary by region. Restore Purchases and offer codes are in Settings.</p>
     </div>
-  </div>
+  </section>
 
-  </div><!-- /feat-carousel -->
-
-  <div class="section-divider"></div>
-
-  <!-- FREE VS PRO -->
-  <div class="pricing-section" id="pricing">
-    <div class="section-tag" style="text-align:center;">Free vs Pro</div>
-    <h2 style="text-align:center;">Unlock Every<br><em>Signal Path</em></h2>
-    <p class="section-desc" style="text-align:center; margin: 16px auto 0;">Device simulations, phase tools, stereo width control, and more. Everything you need to hear your mix the way your audience will.</p>
-
-    <div class="pricing-table-wrap">
-    <table class="pricing-table">
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th>Free</th>
-          <th class="pro-col">Pro</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Cloud sources (Dropbox, Google Drive, iCloud)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Offline playback of synced tracks</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Library &amp; playlists</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Basic meters (Waveform, Digital VU, Analog VU)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Basic console modes (Reference, L/R Flip, Mono, Dim)</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Render &amp; Share</td><td><span class="check check-free">✓</span></td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Pro console modes (M/S Flip, Bass Mono, Width, Pitch, Time, Car Sim, Phone Sim, Crossfeed)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Professional meters (Spectrum, Loudness/LUFS, Stereo Field, Oscilloscope, Phase Correlation)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
-        <tr><td>Projector visualizer (Milkdrop-class presets, full-screen landscape)</td><td style="color:var(--border2);">—</td><td><span class="check check-pro">✓</span></td></tr>
-      </tbody>
-    </table>
-    </div>
-
-    <!-- Pricing tiers -->
-    <div class="pricing-tiers" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:40px;">
-      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">FREE</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$0</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">forever</div>
+  <!-- 7 · POWER DOWN -->
+  <section class="close" id="get" aria-labelledby="h-close">
+    <div class="close__unit">
+      <p class="lbl">End of session</p>
+      <h2 id="h-close">Mix in the studio. Check it everywhere else.</h2>
+      <p class="prose">Signal Desk Pro is coming soon to the App Store for iPhone.</p>
+      <div class="close__row">
+        <span class="badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.7.9-.8 0-2-.9-3.2-.9-1.7 0-3.2 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-3.7zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg>Coming soon on iOS</span>
+        <button class="key key--power" id="power2" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
+          <span>Power on</span>
+        </button>
       </div>
-      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">MONTHLY</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$4.99</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">/month</div>
-      </div>
-      <div style="background:rgba(232,130,12,0.08); border:2px solid var(--amber); border-radius:4px; padding:24px; text-align:center; position:relative;">
-        <div style="position:absolute; top:-11px; left:50%; transform:translateX(-50%); background:var(--amber); color:var(--black); font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:0.15em; padding:3px 10px; border-radius:2px;">BEST VALUE</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--amber); margin-bottom:12px;">ANNUAL</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$29.99</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--amber); margin-top:6px;">$2.50/mo</div>
-      </div>
-      <div style="background:var(--surface); border:1px solid var(--border2); border-radius:4px; padding:24px; text-align:center;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.2em; color:var(--muted); margin-bottom:12px;">LIFETIME</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:42px; color:var(--bright); line-height:1;">$99.00</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); margin-top:6px;">one time</div>
-      </div>
+      <footer class="foot">
+        <span class="lbl">© Signal Desk Pro · signaldeskpro.com</span>
+        <nav aria-label="Footer">
+          <a href="privacy.html">Privacy</a>
+          <a href="support.html">Support</a>
+          <a href="mailto:hello@signaldeskpro.com">Contact</a>
+        </nav>
+      </footer>
     </div>
-    <p style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); text-align:center; margin-top:16px; letter-spacing:0.08em;">Cancel anytime. Restore purchases available in Settings.</p>
-  </div>
+  </section>
 
-  <div class="section-divider"></div>
+</main>
 
-  <!-- CTA -->
-  <div class="cta-section" id="download">
-    <div class="cta-inner">
-      <div class="cta-pre">Available on iOS</div>
-      <div class="cta-title">Mix Translation.<br>In Your<br><em style="font-style:italic; color:var(--amber);">Pocket.</em></div>
-      <p class="cta-sub">Download Signal Desk Pro and start hearing your mixes the way the world will.</p>
-      <div class="cta-buttons">
-        <a href="#" onclick="return false;" class="btn-primary">Coming Soon on the App Store</a>
-      </div>
-      <div class="platform-note">iOS 15.1 or later · Free to download · Professional unlocks everything</div>
-    </div>
-  </div>
+<script src="scrollcraft.js"></script>
+<script>ScrollCraft.mount(document.body);</script>
+<script>
+(() => {
+  // ── Modes: a 2x2 channel matrix plus a few filters, set per key ──
+  const MODES = {
+    stereo:   { name: 'Reference', desc: 'The track as bounced. Every other mode is measured against this.' },
+    swap:     { name: 'L/R Flip', m: [0,1,1,0], desc: 'Left and right trade places. Hear whether the balance holds up.' },
+    mono:     { name: 'Mono', m: [.5,.5,.5,.5], desc: 'Both channels summed. Anything out of phase thins out or disappears.' },
+    dim:      { name: 'Dim', gain: .22, desc: 'Drops the level so you can judge the mix quietly, the way most people hear it.' },
+    msflip:   { name: 'M/S Flip', m: [1,0,0,-1], desc: 'Mid and side swap. The sides come forward so you can hear what lives out there.' },
+    bassmono: { name: 'Bass Mono', bass: 120, desc: 'Everything below 120 Hz goes to mono. Check that the low end survives a club system.' },
+    width:    { name: 'Width', m: [.95,.05,.05,.95], w: 1.9, desc: 'Widen or narrow the stereo image, from 0 to 200 percent.' },
+    pitch:    { name: 'Pitch', app: true, desc: 'Shift pitch without changing tempo. In the app; not in this browser demo.' },
+    time:     { name: 'Time', app: true, desc: 'Change tempo without changing pitch. In the app; not in this browser demo.' },
+    carsim:   { name: 'Car Sim', w: .55, lowShelf: 7, highShelf: -6, desc: 'Boomy low end, a narrow image and soft highs. Your mix in a car.' },
+    phonesim: { name: 'Phone Sim', m: [.5,.5,.5,.5], hp: 650, lp: 5500, desc: 'One small speaker, no low end. Does the bass line still read?' },
+    xfeed:    { name: 'Crossfeed', m: [1,.32,.32,1], desc: 'Bleeds a little of each side into the other, like speakers in a room, so headphones tire you less.' },
+  };
+  const widthMatrix = w => { const a = (1 + w) / 2, b = (1 - w) / 2; return [a, b, b, a]; };
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-logo" style="line-height:1.5;">
-      <div>Mix Translation. In Your Pocket.</div>
-      <div style="font-size:11px; margin-top:2px;">Signal Desk <span>Pro</span></div>
-    </div>
-    <div class="footer-links">
-      <a href="#">signaldeskpro.com</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="support.html">Support</a>
-      <a href="mailto:hello@signaldeskpro.com">Contact</a>
-      <a href="mailto:hello@signaldeskpro.com">Feedback</a>
-    </div>
-    <div class="footer-copy">© Signal Desk Pro</div>
-  </footer>
+  const $ = s => document.querySelector(s);
+  const keys = [...document.querySelectorAll('#keys .key')];
+  const powerBtns = [$('#power'), $('#power2')];
+  let ctx, src, nodes, anL, anR, anMix, mode = 'stereo', lastMode = 'stereo';
 
-  <!-- VU METER ANIMATION -->
-  <script>
-    // ── VU segment colors by position (38 segments per channel)
-    const TOTAL_SEGS = 38;
-    const segColor = (i) => {
-      if (i < 24) return '#3ecf60'; // green  -40 to -10
-      if (i < 30) return '#8ecf20'; // ygreen -10 to -6
-      if (i < 33) return '#e8d020'; // yellow  -6 to -3
-      if (i < 36) return '#e88020'; // orange  -3 to  0
-      return '#e83020';             // red      0 to +3
-    };
+  // ── A short, honest test signal: kick and bass centred, hats right, a wide detuned pad ──
+  async function renderLoop(rate) {
+    // Four bars of E-minor funk at 102 bpm: on the One, swung sixteenths
+    const bpm = 102, s = 60 / bpm / 4, bars = 4, len = s * 16 * bars;
+    const oc = new OfflineAudioContext(2, Math.ceil(len * rate), rate);
+    const out = oc.createGain(); out.gain.value = .42;
+    const comp = oc.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    out.connect(comp).connect(oc.destination);
+    const pan = v => { const p = oc.createStereoPanner(); p.pan.value = v; p.connect(out); return p; };
+    const C = pan(0), CLAV = pan(-.75), HAT = pan(.7), LEAD = pan(.45), CLAP = pan(-.15);
+    const at = (bar, i) => (bar * 16 + i) * s + (i % 2 ? s * .2 : 0);   // swing every other sixteenth
+    const noise = dur => { const b = oc.createBuffer(1, Math.ceil(rate * dur), rate), d = b.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1; const n = oc.createBufferSource(); n.buffer = b; return n; };
 
-    function buildBar(el) {
-      el.innerHTML = '';
-      for (let i = 0; i < TOTAL_SEGS; i++) {
-        const s = document.createElement('div');
-        s.className = 'vu-segment';
-        s.style.background = 'var(--vu-off)';
-        el.appendChild(s);
+    const kick = t => { const o = oc.createOscillator(), g = oc.createGain();
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + .12);
+      g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(.001, t + .38);
+      o.connect(g).connect(C); o.start(t); o.stop(t + .4); };
+    const snare = t => { const n = noise(.25), f = oc.createBiquadFilter(), g = oc.createGain();
+      f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = .7;
+      g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+      n.connect(f).connect(g).connect(CLAP); n.start(t);
+      [0, .011, .023].forEach(d => { const c = noise(.08), cf = oc.createBiquadFilter(), cg = oc.createGain();   // hand clap layer
+        cf.type = 'bandpass'; cf.frequency.value = 1100; cf.Q.value = 2;
+        cg.gain.setValueAtTime(.35, t + d); cg.gain.exponentialRampToValueAtTime(.001, t + d + .07);
+        c.connect(cf).connect(cg).connect(CLAP); c.start(t + d); });
+      const o = oc.createOscillator(), og = oc.createGain(); o.frequency.value = 190;
+      og.gain.setValueAtTime(.3, t); og.gain.exponentialRampToValueAtTime(.001, t + .09); o.connect(og).connect(C); o.start(t); o.stop(t + .1); };
+    const hat = (t, open, v) => { const n = noise(open ? .35 : .05), f = oc.createBiquadFilter(), g = oc.createGain();
+      f.type = 'highpass'; f.frequency.value = 7500;
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + (open ? .3 : .04));
+      n.connect(f).connect(g).connect(HAT); n.start(t); };
+    const bass = (t, f0, dur, slideTo) => {   // squelchy synth bass: two oscillators, resonant filter that snaps shut
+      const g = oc.createGain(), lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 9;
+      lp.frequency.setValueAtTime(2200, t); lp.frequency.exponentialRampToValueAtTime(220, t + Math.min(dur, .18));
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.42, t + .005); g.gain.setValueAtTime(.42, t + dur * .8); g.gain.linearRampToValueAtTime(0, t + dur);
+      ['sawtooth', 'square'].forEach((type, k) => { const o = oc.createOscillator(); o.type = type; o.detune.value = k ? -6 : 6;
+        o.frequency.setValueAtTime(f0, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur * .9);
+        o.connect(lp); o.start(t); o.stop(t + dur + .01); });
+      lp.connect(g).connect(C); };
+    const clav = (t, notes) => {   // scratchy clavinet stab
+      notes.forEach(f => { const o = oc.createOscillator(), bp = oc.createBiquadFilter(), g = oc.createGain();
+        o.type = 'square'; o.frequency.value = f; bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 3;
+        g.gain.setValueAtTime(.07, t); g.gain.exponentialRampToValueAtTime(.001, t + .09);
+        o.connect(bp).connect(g).connect(CLAV); o.start(t); o.stop(t + .1); }); };
+    const lead = (t, path, dur) => {   // gliding synth lead, a little vibrato
+      const o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain(), lfo = oc.createOscillator(), lg = oc.createGain();
+      o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 4;
+      lfo.frequency.value = 5.5; lg.gain.value = 9; lfo.connect(lg).connect(o.detune);
+      o.frequency.setValueAtTime(path[0][1], t);
+      path.forEach(([dt, f]) => o.frequency.exponentialRampToValueAtTime(f, t + dt));
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .03); g.gain.setValueAtTime(.09, t + dur - .08); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(lp).connect(g).connect(LEAD); o.start(t); lfo.start(t); o.stop(t + dur); lfo.stop(t + dur); };
+
+    const E1 = 41.2, E2 = 82.4, G2 = 98, A2 = 110, B1 = 61.7, D2 = 73.4;
+    const bassBar = [[0, E1, 2.5], [3, E2, .9], [5, E1, .9], [7, G2, .9], [8, A2, .9, G2], [10, E1, 1.5], [12, D2, .9], [14, E2, 1.2, B1 * 2]];
+    const em7 = [164.8, 196, 246.9, 293.7], a7 = [220, 277.2, 329.6, 392];
+    for (let bar = 0; bar < bars; bar++) {
+      [0, 7, 10].forEach(i => kick(at(bar, i)));
+      [4, 12].forEach(i => snare(at(bar, i)));
+      for (let i = 0; i < 16; i++) hat(at(bar, i), i === 14, i % 4 === 2 ? .3 : i % 2 ? .12 : .2);
+      bassBar.forEach(([i, f, d, slide]) => bass(at(bar, i), bar === 3 && i >= 12 ? f * 1.5 : f, d * s * 1.6, slide));
+      [2, 5, 9, 11, 14].forEach(i => clav(at(bar, i), bar % 2 ? a7 : em7));
+    }
+    lead(at(1, 8), [[.0, 659.3], [.18, 784], [.36, 880], [.6, 987.8], [.9, 880], [1.2, 784]], 1.5);
+    lead(at(3, 4), [[.0, 987.8], [.15, 1174.7], [.4, 987.8], [.6, 880], [.8, 784], [1.05, 659.3]], 1.3);
+    return oc.startRendering();
+  }
+
+  function build() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
+    const g = [0,1,2,3].map(() => ctx.createGain());
+    split.connect(g[0], 0); split.connect(g[1], 1); split.connect(g[2], 0); split.connect(g[3], 1);
+    g[0].connect(merge, 0, 0); g[1].connect(merge, 0, 0); g[2].connect(merge, 0, 1); g[3].connect(merge, 0, 1);
+    const lowShelf = ctx.createBiquadFilter(); lowShelf.type = 'lowshelf'; lowShelf.frequency.value = 110;
+    const highShelf = ctx.createBiquadFilter(); highShelf.type = 'highshelf'; highShelf.frequency.value = 5000;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 10;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 20000;
+    const bassHp = ctx.createBiquadFilter(); bassHp.type = 'highpass'; bassHp.frequency.value = 10;
+    const bassLp = ctx.createBiquadFilter(); bassLp.type = 'lowpass'; bassLp.frequency.value = 120;
+    const bassMono = ctx.createGain(); bassMono.channelCount = 1; bassMono.channelCountMode = 'explicit'; bassMono.gain.value = 0;
+    const master = ctx.createGain();
+    merge.connect(lowShelf).connect(highShelf).connect(hp).connect(lp);
+    lp.connect(bassHp).connect(master);
+    lp.connect(bassLp).connect(bassMono).connect(master);
+    const outSplit = ctx.createChannelSplitter(2);
+    anL = ctx.createAnalyser(); anR = ctx.createAnalyser(); anMix = ctx.createAnalyser();
+    [anL, anR].forEach(a => { a.fftSize = 2048; }); anMix.fftSize = 4096; anMix.smoothingTimeConstant = .8;
+    master.connect(outSplit); outSplit.connect(anL, 0); outSplit.connect(anR, 1);
+    master.connect(anMix); master.connect(ctx.destination);
+    nodes = { split, g, lowShelf, highShelf, hp, lp, bassHp, bassMono, master };
+  }
+
+  function apply(id) {
+    const M = MODES[id], t = ctx ? ctx.currentTime : 0, ramp = (p, v) => p.setTargetAtTime(v, t, .03);
+    $('#ro-mode').textContent = M.name.toUpperCase();
+    $('#ro-desc').textContent = M.desc;
+    $('#demo-note').textContent = M.app ? 'App only' : '';
+    status();
+    if (!nodes) return;
+    const m = M.m || (M.w !== undefined ? widthMatrix(M.w) : [1,0,0,1]);
+    nodes.g.forEach((n, i) => ramp(n.gain, m[i]));
+    ramp(nodes.master.gain, M.gain || 1);
+    ramp(nodes.lowShelf.gain, M.lowShelf || 0);
+    ramp(nodes.highShelf.gain, M.highShelf || 0);
+    ramp(nodes.hp.frequency, M.hp || 10);
+    ramp(nodes.lp.frequency, M.lp || 20000);
+    ramp(nodes.bassHp.frequency, M.bass || 10);
+    ramp(nodes.bassMono.gain, M.bass ? 1 : 0);
+  }
+
+  function status() {
+    const on = ctx && ctx.state === 'running';
+    $('#ro-state').textContent = !on ? 'Signal off. Press Power on to listen.'
+      : MODES[mode].app ? 'Test loop playing unprocessed.' : mode === 'stereo' ? 'Test loop playing.' : 'Engaged. Tap again to A/B.';
+  }
+
+  keys.forEach(k => k.addEventListener('click', () => {
+    const id = k.dataset.mode;
+    const next = (id === mode && id !== 'stereo') ? 'stereo' : id;   // tap again = A/B to reference
+    if (next !== 'stereo') lastMode = next;
+    mode = next;
+    keys.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mode === mode)));
+    if (!ctx || ctx.state !== 'running') power(true);
+    apply(mode);
+  }));
+
+  async function power(want) {
+    if (want) {
+      if (!ctx) {
+        build();
+        const buf = await renderLoop(ctx.sampleRate);
+        src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(nodes.split); src.start();
       }
-    }
+      await ctx.resume();
+    } else if (ctx) { await ctx.suspend(); }
+    const on = !!want;
+    document.body.classList.toggle('on', on);
+    powerBtns.forEach(b => { b.setAttribute('aria-pressed', String(on)); b.querySelector('span').textContent = on ? 'Power off' : 'Power on'; });
+    apply(mode);
+  }
+  powerBtns.forEach(b => b.addEventListener('click', () => power(!(ctx && ctx.state === 'running'))));
 
-    function buildMiniBar(el) {
-      el.innerHTML = '';
-      for (let i = 0; i < TOTAL_SEGS; i++) {
-        const s = document.createElement('div');
-        s.className = 'mini-vu-seg';
-        s.style.background = 'var(--vu-off)';
-        s.style.flex = '1';
-        s.style.borderRadius = '1px';
-        el.appendChild(s);
-      }
-    }
+  // ── Meters: one rAF loop reads the analysers ──
+  const needles = [...document.querySelectorAll('.vu')].map(v => ({ n: v.querySelector('.vu__needle'), db: v.querySelector('[data-db]'), a: -48 }));
+  const tL = new Float32Array(2048), tR = new Float32Array(2048), fq = new Uint8Array(2048);
+  const cv = id => { const c = document.getElementById(id); return c && c.getContext('2d'); };
+  const C = { wave: cv('cv-wave'), dig: cv('cv-dig'), spec: cv('cv-spec'), field: cv('cv-field'), scope: cv('cv-scope'), corr: cv('cv-corr'), proj: cv('cv-proj') };
+  const W = 560, H = 420, AMBER = '#e39a3b', GRID = '#24211c';
+  const hold = [{ v: -60, t: 0 }, { v: -60, t: 0 }];
+  const waveHist = new Float32Array(140); let wi = 0, frame = 0;
+  const rms = a => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * a[i]; return Math.sqrt(s / a.length); };
+  const peak = a => { let p = 0; for (let i = 0; i < a.length; i++) p = Math.max(p, Math.abs(a[i])); return p; };
+  const dB = v => v > 0 ? 20 * Math.log10(v) : -Infinity;
 
-    function setLevel(el, level) {
-      // level: 0.0 – 1.0 where 1.0 = clipping (+3dB)
-      const segs = el.children;
-      const lit = Math.floor(level * TOTAL_SEGS);
-      for (let i = 0; i < TOTAL_SEGS; i++) {
-        segs[i].style.background = i < lit ? segColor(i) : 'var(--vu-off)';
-        segs[i].style.boxShadow = i < lit && i === lit - 1
-          ? `0 0 4px ${segColor(i)}88` : 'none';
-      }
-    }
+  function bg(c) { c.fillStyle = '#0d0c0a'; c.fillRect(0, 0, W, H); }
 
-    // Build bars
-    const vuL = document.getElementById('vu-left');
-    const vuR = document.getElementById('vu-right');
-    const miniL  = document.getElementById('mini-vu-l');
-    const miniR  = document.getElementById('mini-vu-r');
-    const mockB1 = document.getElementById('mock-bar-1');
-    const mockB2 = document.getElementById('mock-bar-2');
-    if (vuL) buildBar(vuL);
-    if (vuR) buildBar(vuR);
-    buildMiniBar(miniL); buildMiniBar(miniR);
-    if (mockB1) buildMiniBar(mockB1);
-    if (mockB2) buildMiniBar(mockB2);
+  function tick(now) {
+    const on = document.body.classList.contains('on');
+    if (on) { anL.getFloatTimeDomainData(tL); anR.getFloatTimeDomainData(tR); anMix.getByteFrequencyData(fq); }
+    else { tL.fill(0); tR.fill(0); fq.fill(0); }
+    const lv = [tL, tR].map(a => { const r = rms(a); return { r, p: peak(a), vu: dB(r) + 18 - 3 }; }); // -18 dBFS RMS ≈ 0 VU, offset for the synth
 
-    // Simulate audio playback movement
-    let tL = 0, tR = Math.PI * 0.7;
-    let peakL = 0, peakR = 0;
-    let decayL = 0, decayR = 0;
-
-    function animVU() {
-      tL += 0.04 + Math.random() * 0.02;
-      tR += 0.035 + Math.random() * 0.025;
-
-      // Generate signal with musical variation
-      const baseL = 0.55 + 0.22 * Math.sin(tL * 0.8) + 0.12 * Math.sin(tL * 2.1) + 0.08 * Math.sin(tL * 5.3);
-      const baseR = 0.53 + 0.24 * Math.sin(tR * 0.75) + 0.10 * Math.sin(tR * 1.9) + 0.09 * Math.sin(tR * 4.7);
-
-      // Random transients
-      const transL = Math.random() < 0.04 ? 0.15 * Math.random() : 0;
-      const transR = Math.random() < 0.04 ? 0.15 * Math.random() : 0;
-
-      const lL = Math.min(1, Math.max(0, baseL + transL));
-      const lR = Math.min(1, Math.max(0, baseR + transR));
-
-      if (vuL) setLevel(vuL, lL);
-      if (vuR) setLevel(vuR, lR);
-      setLevel(miniL, lL);
-      setLevel(miniR, lR);
-      if (mockB1) setLevel(mockB1, lL);
-      if (mockB2) setLevel(mockB2, lR);
-
-      requestAnimationFrame(animVU);
-    }
-    animVU();
-
-    // Feature button toggle (demo)
-    document.querySelectorAll('.feat-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.feat-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
+    needles.forEach((nd, i) => {
+      const target = Math.max(-48, Math.min(48, ((Math.max(lv[i].vu, -22) + 22) / 25) * 96 - 48));
+      nd.a += (target - nd.a) * .12;
+      nd.n.style.transform = `rotate(${nd.a.toFixed(2)}deg)`;
+      if (frame % 6 === 0) nd.db.textContent = isFinite(lv[i].vu) && lv[i].vu > -40 ? lv[i].vu.toFixed(1) : '-∞';
     });
+    const pct = v => Math.max(0, Math.min(100, ((v + 30) / 33) * 100)).toFixed(1) + '%';
+    $('#mvL').style.setProperty('--lv', pct(lv[0].vu)); $('#mvR').style.setProperty('--lv', pct(lv[1].vu));
 
-    // Console mode buttons — interactive illustration
-    (function() {
-      const buttons = document.querySelectorAll('#console .illus-btn[data-mode]');
-      const nameEl = document.getElementById('console-mode-name');
-      const statusEl = document.getElementById('console-mode-status');
+    // Waveform history
+    if (C.wave) { const c = C.wave; bg(c); waveHist[wi++ % 140] = Math.max(lv[0].p, lv[1].p);
+      c.fillStyle = AMBER; for (let i = 0; i < 140; i++) { const v = waveHist[(wi + i) % 140], h = Math.max(2, v * H * .8); c.fillRect(i * 4, (H - h) / 2, 3, h); } }
+    // Digital VU with 2-second hold
+    if (C.dig) { const c = C.dig; bg(c);
+      lv.forEach((l, i) => { const d = Math.max(-60, dB(l.p)); if (d > hold[i].v || now - hold[i].t > 2000) { hold[i] = { v: d, t: now }; }
+        const x = 120 + i * 200, h = ((d + 60) / 60) * (H - 80), hh = ((hold[i].v + 60) / 60) * (H - 80);
+        c.fillStyle = GRID; c.fillRect(x, 40, 120, H - 80);
+        const gr = c.createLinearGradient(0, H - 40, 0, 40); gr.addColorStop(0, '#6b8f3a'); gr.addColorStop(.75, '#d4a23a'); gr.addColorStop(.95, '#d0553a');
+        c.fillStyle = gr; c.fillRect(x, H - 40 - h, 120, h); c.fillStyle = '#ece5d8'; c.fillRect(x, H - 40 - hh, 120, 3); }); }
+    // Spectrum, log-spaced
+    if (C.spec) { const c = C.spec; bg(c); const n = 48, ny = ctx ? ctx.sampleRate / 2 : 24000;
+      for (let b = 0; b < n; b++) { const f = 30 * Math.pow(18000 / 30, b / n), idx = Math.min(2047, Math.round(f / ny * 2048)), v = fq[idx] / 255, h = v * (H - 40);
+        c.fillStyle = AMBER; c.globalAlpha = .35 + v * .65; c.fillRect(10 + b * 11.4, H - 20 - h, 8, h); } c.globalAlpha = 1; }
+    // Stereo field: rotated L/R scatter
+    if (C.field) { const c = C.field; c.fillStyle = 'rgba(13,12,10,.35)'; c.fillRect(0, 0, W, H);
+      c.strokeStyle = GRID; c.beginPath(); c.arc(W/2, H - 20, 190, Math.PI, 0); c.stroke();
+      c.fillStyle = '#9fd36a'; for (let i = 0; i < 2048; i += 4) { const m = (tL[i] + tR[i]) * .5, s = (tL[i] - tR[i]) * .5; const x = W/2 + s * 300, y = H - 20 - Math.abs(m) * 300; c.fillRect(x, y, 2, 2); } }
+    // Oscilloscope
+    if (C.scope) { const c = C.scope; bg(c); c.strokeStyle = GRID; c.beginPath(); c.moveTo(0, H/2); c.lineTo(W, H/2); c.stroke();
+      c.strokeStyle = '#9fd36a'; c.lineWidth = 2; c.beginPath(); for (let i = 0; i < 1024; i++) { const x = i / 1024 * W, y = H/2 - (tL[i] + tR[i]) * .5 * H * .9; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.lineWidth = 1; }
+    // Phase correlation
+    if (C.corr) { const c = C.corr; bg(c); let lr = 0, ll = 0, rr = 0; for (let i = 0; i < 2048; i++) { lr += tL[i] * tR[i]; ll += tL[i] * tL[i]; rr += tR[i] * tR[i]; }
+      const k = ll && rr ? lr / Math.sqrt(ll * rr) : 0; C.corr.k = (C.corr.k || 0) + (k - (C.corr.k || 0)) * .1;
+      c.fillStyle = GRID; c.fillRect(40, H/2 - 10, W - 80, 20); const x = W/2 + C.corr.k * (W/2 - 40);
+      c.fillStyle = C.corr.k < 0 ? '#d0553a' : AMBER; c.fillRect(Math.min(W/2, x), H/2 - 10, Math.abs(x - W/2), 20);
+      c.fillStyle = '#a59c8c'; c.font = '20px JetBrains Mono, monospace'; c.textAlign = 'center';
+      c.fillText('−1', 40, H/2 + 50); c.fillText('0', W/2, H/2 + 50); c.fillText('+1', W - 40, H/2 + 50);
+      c.fillStyle = '#ece5d8'; c.font = '600 44px Archivo, sans-serif'; c.fillText((C.corr.k >= 0 ? '+' : '') + C.corr.k.toFixed(2), W/2, H/2 - 50); }
+    // Projector-ish: amber rings breathing with the bass
+    if (C.proj) { const c = C.proj; c.fillStyle = 'rgba(13,12,10,.18)'; c.fillRect(0, 0, W, H); const bass = (fq[4] + fq[6] + fq[8]) / 765;
+      for (let r = 0; r < 6; r++) { c.strokeStyle = `hsla(${32 + r * 8}, 80%, ${45 + r * 4}%, ${.25 + bass * .6})`; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(W/2, H/2, 40 + r * 32 + bass * 60, (40 + r * 26 + bass * 40), now / 3000 + r * .3, 0, Math.PI * 2); c.stroke(); } }
+    frame++;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 
-      buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const isOn = btn.classList.contains('on');
-          // Deactivate all
-          buttons.forEach(b => b.classList.remove('on'));
-          if (isOn) {
-            // Toggle off — show bypassed state
-            nameEl.textContent = btn.dataset.mode;
-            statusEl.textContent = 'BYPASSED · TAP TO ENGAGE';
-            nameEl.style.color = 'var(--muted)';
-            nameEl.style.textShadow = 'none';
-          } else {
-            // Activate clicked button
-            btn.classList.add('on');
-            nameEl.textContent = btn.dataset.mode;
-            statusEl.textContent = 'ACTIVE · TAP TO BYPASS';
-            nameEl.style.color = 'var(--amber)';
-            nameEl.style.textShadow = '0 0 40px rgba(232,130,12,0.4)';
-          }
-        });
-      });
-    })();
-  </script>
+  // Meter rail travel: the engine publishes --sc-p on the pinned act; this sets how far it goes
+  const rail = document.getElementById('rail');
+  const setTravel = () => rail.style.setProperty('--travel', Math.max(0, rail.scrollWidth - innerWidth) + 'px');
+  setTravel(); addEventListener('resize', setTravel);
+
+  // Active tab in the faceplate strip
+  const links = [...document.querySelectorAll('.strip nav a')];
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.toggleAttribute('aria-current', a.getAttribute('href') === '#' + e.target.id)); }), { rootMargin: '-45% 0px -50% 0px' });
+  ['console','meters','sources','export','plans'].forEach(id => io.observe(document.getElementById(id)));
+})();
+</script>
 </body>
 </html>
