@@ -29,6 +29,7 @@
       "@type": "Organization",
       "@id": "https://signaldeskpro.com/#org",
       "name": "Silverplatter Audio",
+      "url": "https://silverplatteraudio.com",
       "logo": "https://signaldeskpro.com/assets/silverplatter-mark.svg",
       "email": "hello@signaldeskpro.com"
     },
@@ -202,7 +203,8 @@
   .face__badge { position: absolute; top: clamp(20px, 3vw, 40px); right: clamp(20px, 3vw, 40px); height: 26px; color: var(--sc-ink-soft); }
   @media (max-width: 860px) { .face__badge { position: static; height: 20px; justify-self: start; margin-bottom: -.4rem; } }
   .foot__maker { display: flex; align-items: center; gap: .9rem; }
-  .foot__maker .sp-logo { height: 22px; color: var(--sc-ink-soft); }
+  .foot__maker .sp-logo { height: 22px; color: var(--sc-ink-soft); transition: color .2s; display: block; }
+  .foot__logo:hover .sp-logo { color: var(--sc-ink); }
 
   /* ── 2 · Console (the peak) ── */
   .console { padding: clamp(5rem, 12vh, 9rem) clamp(16px, 4vw, 56px) clamp(4rem, 9vh, 7rem); }
@@ -580,11 +582,12 @@
         </button>
       </div>
       <footer class="foot">
-        <div class="foot__maker"><span class="sp-logo" role="img" aria-label="Silverplatter Audio"></span><span class="lbl">© 2026 · Makers of Signal Desk Pro</span></div>
+        <div class="foot__maker"><a href="https://silverplatteraudio.com" class="foot__logo" aria-label="Silverplatter Audio website"><span class="sp-logo" aria-hidden="true"></span></a><span class="lbl">© 2026 · Makers of Signal Desk Pro</span></div>
         <nav aria-label="Footer">
           <a href="privacy.html">Privacy</a>
           <a href="support.html">Support</a>
           <a href="mailto:hello@signaldeskpro.com">Contact</a>
+          <a href="https://silverplatteraudio.com">silverplatteraudio.com</a>
         </nav>
       </footer>
     </div>
