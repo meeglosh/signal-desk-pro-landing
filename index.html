@@ -129,7 +129,8 @@
   /* Silverplatter Audio banner, tinted like an engraved maker's plate */
   .sp-logo { display: inline-block; aspect-ratio: 4041 / 627; height: 1em; background: currentColor; vertical-align: -0.12em;
     -webkit-mask: url(assets/silverplatter-banner.svg) center / contain no-repeat; mask: url(assets/silverplatter-banner.svg) center / contain no-repeat; }
-  .face .lbl .sp-logo { height: 2.6em; vertical-align: middle; margin-bottom: .55rem; color: var(--sc-ink-soft); margin-right: .5em; }
+  .face__badge { position: absolute; top: clamp(20px, 3vw, 40px); right: clamp(20px, 3vw, 40px); height: 26px; color: var(--sc-ink-soft); }
+  @media (max-width: 860px) { .face__badge { position: static; height: 20px; justify-self: start; margin-bottom: -.4rem; } }
   .foot__maker { display: flex; align-items: center; gap: .9rem; }
   .foot__maker .sp-logo { height: 22px; color: var(--sc-ink-soft); }
 
@@ -282,8 +283,9 @@
   <section class="face" aria-labelledby="h-face">
     <div class="face__unit panel">
       <span class="screw"></span><span class="screw"></span><span class="screw"></span><span class="screw"></span>
+      <span class="sp-logo face__badge" role="img" aria-label="Silverplatter Audio"></span>
       <div>
-        <p class="lbl"><span class="sp-logo" role="img" aria-label="Silverplatter Audio"></span><br><b>Signal Desk Pro · for iPhone</b></p>
+        <p class="lbl"><b>Signal Desk Pro · for iPhone</b></p>
         <h1 id="h-face">Hear your mix the way <em>everyone else</em> will.</h1>
         <p class="lede">A player built for mixing engineers. Pull bounces from Dropbox, Google Drive or your phone itself, check them through twelve console modes and nine meters, then share it on.</p>
         <div class="face__controls">
