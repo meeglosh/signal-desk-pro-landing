@@ -35,16 +35,10 @@
   :focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; }
 
 
-  /* Vintage texture: film grain over everything, brushed grain on the panels, a dark vignette at the edges */
-  .grain { position: fixed; inset: -50%; z-index: 40; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 200px; opacity: .16; }
-  .vignette { position: fixed; inset: 0; z-index: 39; pointer-events: none; background: radial-gradient(ellipse 120% 90% at 50% 45%, transparent 45%, rgba(6,5,4,.7) 100%); }
-  body { background-image: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(227,154,59,.05), transparent 70%); background-attachment: fixed; }
-  .panel { background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 180px,
-      linear-gradient(180deg, var(--panel-hi), var(--panel) 40%);
-    background-blend-mode: normal, soft-light, normal; }
-  .vu { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), radial-gradient(120% 90% at 50% 100%, #f3ddb0 0%, #e2c58a 55%, #c9a766 100%); background-size: 160px, auto; background-blend-mode: multiply, normal; }
+  /* Grain: dark and light specks in balance, so the texture reads without lifting the page's overall darkness */
+  .grain, .grain::after { position: fixed; inset: 0; z-index: 40; pointer-events: none; background-size: 220px; }
+  .grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3 1.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: var(--grain-dark, .32); }
+  .grain::after { content: ""; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 3 -1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: var(--grain-light, .065); }
 
   /* Engraved label idiom: the page's only "eyebrow" voice */
   .lbl { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--engrave); }
@@ -250,7 +244,6 @@
 
 <span data-sc-progress></span>
 <div class="grain" aria-hidden="true"></div>
-<div class="vignette" aria-hidden="true"></div>
 
 <header class="strip">
   <a class="strip__mark" href="#top" aria-label="Signal Desk Pro, top"><i aria-hidden="true"></i>Signal Desk Pro</a>
