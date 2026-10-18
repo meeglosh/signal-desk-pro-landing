@@ -279,7 +279,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
             <span id="power-label">Power on</span>
           </button>
-          <p class="face__note">Plays a short synthesized stereo loop in your browser. Headphones are best.</p>
+          <p class="face__note">Plays a short synthesized funk loop in your browser. Headphones are best.</p>
         </div>
       </div>
       <div class="vu-pair" role="img" aria-label="Two analog VU meters, left and right channel">
@@ -320,7 +320,7 @@
         <p class="lbl">Console <b>· 12 modes</b></p>
         <h2 id="h-console">Press a key. Hear what it does.</h2>
         <p>Every mix ends up somewhere you didn't mix it: a car, a phone speaker, one earbud. In the app, Signal Desk runs your track through those places. Tap a mode to engage it. Tap it again to A/B against the source.</p>
-        <p style="margin-top:1rem">Try them here with the test loop. Mono pulls the wide pad into the middle. Phone Sim takes the low end out. L/R Flip moves the hi-hat to the other ear.</p>
+        <p style="margin-top:1rem">Try them here with the test loop. Mono pulls the clav and the synth lead into the middle. Phone Sim takes the bass out. L/R Flip swaps the clav and the hi-hats.</p>
         <div class="mini-vu" aria-hidden="true">
           <span>L</span><div class="mini-vu__track"><div class="mini-vu__bar" id="mvL"></div></div>
           <span>R</span><div class="mini-vu__track"><div class="mini-vu__bar" id="mvR"></div></div>
@@ -505,45 +505,70 @@
 
   // ── A short, honest test signal: kick and bass centred, hats right, a wide detuned pad ──
   async function renderLoop(rate) {
-    const bpm = 112, beat = 60 / bpm, len = beat * 16;
+    // Four bars of E-minor funk at 102 bpm: on the One, swung sixteenths
+    const bpm = 102, s = 60 / bpm / 4, bars = 4, len = s * 16 * bars;
     const oc = new OfflineAudioContext(2, Math.ceil(len * rate), rate);
-    const out = oc.createGain(); out.gain.value = .8; out.connect(oc.destination);
+    const out = oc.createGain(); out.gain.value = .42;
+    const comp = oc.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    out.connect(comp).connect(oc.destination);
     const pan = v => { const p = oc.createStereoPanner(); p.pan.value = v; p.connect(out); return p; };
-    const C = pan(0), R = pan(.75), L = pan(-.9), RR = pan(.9);
-    for (let i = 0; i < 16; i++) {
-      const t = i * beat;
-      if (i % 2 === 0) { // kick
-        const o = oc.createOscillator(), g = oc.createGain();
-        o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + .18);
-        g.gain.setValueAtTime(.95, t); g.gain.exponentialRampToValueAtTime(.001, t + .45);
-        o.connect(g).connect(C); o.start(t); o.stop(t + .5);
-      }
-      for (const off of [0, .5]) { // hats
-        const n = oc.createBufferSource(), b = oc.createBuffer(1, rate * .06, rate), d = b.getChannelData(0);
-        for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * (1 - j / d.length) ** 3;
-        n.buffer = b; const f = oc.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
-        const g = oc.createGain(); g.gain.value = off ? .22 : .35; n.connect(f).connect(g).connect(R); n.start(t + off * beat);
-      }
+    const C = pan(0), CLAV = pan(-.75), HAT = pan(.7), LEAD = pan(.45), CLAP = pan(-.15);
+    const at = (bar, i) => (bar * 16 + i) * s + (i % 2 ? s * .2 : 0);   // swing every other sixteenth
+    const noise = dur => { const b = oc.createBuffer(1, Math.ceil(rate * dur), rate), d = b.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1; const n = oc.createBufferSource(); n.buffer = b; return n; };
+
+    const kick = t => { const o = oc.createOscillator(), g = oc.createGain();
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + .12);
+      g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(.001, t + .38);
+      o.connect(g).connect(C); o.start(t); o.stop(t + .4); };
+    const snare = t => { const n = noise(.25), f = oc.createBiquadFilter(), g = oc.createGain();
+      f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = .7;
+      g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+      n.connect(f).connect(g).connect(CLAP); n.start(t);
+      [0, .011, .023].forEach(d => { const c = noise(.08), cf = oc.createBiquadFilter(), cg = oc.createGain();   // hand clap layer
+        cf.type = 'bandpass'; cf.frequency.value = 1100; cf.Q.value = 2;
+        cg.gain.setValueAtTime(.35, t + d); cg.gain.exponentialRampToValueAtTime(.001, t + d + .07);
+        c.connect(cf).connect(cg).connect(CLAP); c.start(t + d); });
+      const o = oc.createOscillator(), og = oc.createGain(); o.frequency.value = 190;
+      og.gain.setValueAtTime(.3, t); og.gain.exponentialRampToValueAtTime(.001, t + .09); o.connect(og).connect(C); o.start(t); o.stop(t + .1); };
+    const hat = (t, open, v) => { const n = noise(open ? .35 : .05), f = oc.createBiquadFilter(), g = oc.createGain();
+      f.type = 'highpass'; f.frequency.value = 7500;
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + (open ? .3 : .04));
+      n.connect(f).connect(g).connect(HAT); n.start(t); };
+    const bass = (t, f0, dur, slideTo) => {   // squelchy synth bass: two oscillators, resonant filter that snaps shut
+      const g = oc.createGain(), lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 9;
+      lp.frequency.setValueAtTime(2200, t); lp.frequency.exponentialRampToValueAtTime(220, t + Math.min(dur, .18));
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.42, t + .005); g.gain.setValueAtTime(.42, t + dur * .8); g.gain.linearRampToValueAtTime(0, t + dur);
+      ['sawtooth', 'square'].forEach((type, k) => { const o = oc.createOscillator(); o.type = type; o.detune.value = k ? -6 : 6;
+        o.frequency.setValueAtTime(f0, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur * .9);
+        o.connect(lp); o.start(t); o.stop(t + dur + .01); });
+      lp.connect(g).connect(C); };
+    const clav = (t, notes) => {   // scratchy clavinet stab
+      notes.forEach(f => { const o = oc.createOscillator(), bp = oc.createBiquadFilter(), g = oc.createGain();
+        o.type = 'square'; o.frequency.value = f; bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 3;
+        g.gain.setValueAtTime(.07, t); g.gain.exponentialRampToValueAtTime(.001, t + .09);
+        o.connect(bp).connect(g).connect(CLAV); o.start(t); o.stop(t + .1); }); };
+    const lead = (t, path, dur) => {   // gliding synth lead, a little vibrato
+      const o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain(), lfo = oc.createOscillator(), lg = oc.createGain();
+      o.type = 'sawtooth'; lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 4;
+      lfo.frequency.value = 5.5; lg.gain.value = 9; lfo.connect(lg).connect(o.detune);
+      o.frequency.setValueAtTime(path[0][1], t);
+      path.forEach(([dt, f]) => o.frequency.exponentialRampToValueAtTime(f, t + dt));
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .03); g.gain.setValueAtTime(.09, t + dur - .08); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(lp).connect(g).connect(LEAD); o.start(t); lfo.start(t); o.stop(t + dur); lfo.stop(t + dur); };
+
+    const E1 = 41.2, E2 = 82.4, G2 = 98, A2 = 110, B1 = 61.7, D2 = 73.4;
+    const bassBar = [[0, E1, 2.5], [3, E2, .9], [5, E1, .9], [7, G2, .9], [8, A2, .9, G2], [10, E1, 1.5], [12, D2, .9], [14, E2, 1.2, B1 * 2]];
+    const em7 = [164.8, 196, 246.9, 293.7], a7 = [220, 277.2, 329.6, 392];
+    for (let bar = 0; bar < bars; bar++) {
+      [0, 7, 10].forEach(i => kick(at(bar, i)));
+      [4, 12].forEach(i => snare(at(bar, i)));
+      for (let i = 0; i < 16; i++) hat(at(bar, i), i === 14, i % 4 === 2 ? .3 : i % 2 ? .12 : .2);
+      bassBar.forEach(([i, f, d, slide]) => bass(at(bar, i), bar === 3 && i >= 12 ? f * 1.5 : f, d * s * 1.6, slide));
+      [2, 5, 9, 11, 14].forEach(i => clav(at(bar, i), bar % 2 ? a7 : em7));
     }
-    const bassNotes = [41.2, 41.2, 49, 36.7];
-    bassNotes.forEach((f0, bar) => {
-      for (let k = 0; k < 4; k++) {
-        const t = (bar * 4 + k) * beat, o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain();
-        o.type = 'sawtooth'; o.frequency.value = f0 * (k === 3 ? 2 : 1); lp.type = 'lowpass'; lp.frequency.value = 260;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.45, t + .01); g.gain.exponentialRampToValueAtTime(.01, t + beat * .9);
-        o.connect(lp).connect(g).connect(C); o.start(t); o.stop(t + beat);
-      }
-    });
-    const chords = [[220, 261.6, 329.6], [220, 261.6, 329.6], [196, 246.9, 293.7], [174.6, 220, 261.6]];
-    chords.forEach((ch, bar) => {
-      const t = bar * 4 * beat, d = 4 * beat;
-      ch.forEach(f => [[L, -7], [RR, 7]].forEach(([dest, cents]) => {
-        const o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain();
-        o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = cents; lp.type = 'lowpass'; lp.frequency.value = 1800;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.06, t + .4); g.gain.setValueAtTime(.06, t + d - .3); g.gain.linearRampToValueAtTime(0, t + d);
-        o.connect(lp).connect(g).connect(dest); o.start(t); o.stop(t + d);
-      }));
-    });
+    lead(at(1, 8), [[.0, 659.3], [.18, 784], [.36, 880], [.6, 987.8], [.9, 880], [1.2, 784]], 1.5);
+    lead(at(3, 4), [[.0, 987.8], [.15, 1174.7], [.4, 987.8], [.6, 880], [.8, 784], [1.05, 659.3]], 1.3);
     return oc.startRendering();
   }
 
