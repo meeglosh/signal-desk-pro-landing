@@ -97,6 +97,15 @@
   .key[aria-pressed="true"] { background: linear-gradient(180deg, #f0ab4c, #d48a2c); color: var(--sc-accent-ink); }
   .key--power { flex-direction: row; gap: .7rem; font-family: var(--mono); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; padding: 1rem 1.4rem; color: var(--sc-ink); }
   .key--power svg { width: 18px; height: 18px; }
+  /* Until the signal is on, the power key breathes so visitors find it */
+  @keyframes power-breathe {
+    0%, 100% { box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0d0c0a, 0 0 0 0 rgba(227,154,59,0), 0 0 0 rgba(255,181,77,0); }
+    50%      { box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 4px 0 #0d0c0a, 0 0 0 6px rgba(227,154,59,.22), 0 4px 30px rgba(255,181,77,.5); }
+  }
+  @keyframes power-lamp { 0%, 100% { color: var(--sc-ink); } 50% { color: var(--lamp); } }
+  body:not(.on) #power { animation: power-breathe 2.6s ease-in-out infinite; }
+  body:not(.on) #power svg { animation: power-lamp 2.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { body:not(.on) #power { animation: none; box-shadow: 0 4px 0 #0d0c0a, 0 0 0 2px rgba(227,154,59,.5); } body:not(.on) #power svg { animation: none; color: var(--lamp); } }
 
   /* ── 2 · Console (the peak) ── */
   .console { padding: clamp(5rem, 12vh, 9rem) clamp(16px, 4vw, 56px) clamp(4rem, 9vh, 7rem); }
@@ -160,7 +169,14 @@
   .take { padding: clamp(5rem, 12vh, 9rem) clamp(16px, 4vw, 56px); }
   .take__grid { width: min(1180px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 80px); align-items: center; }
   .phones { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .phones figure:nth-child(2) { margin-top: 3.5rem; }
+  /* The second phone deals out from behind the first as the section arrives.
+     --k runs 1 → 0 across flow progress 0.12 → 0.42, then holds. */
+  .phones { --k: clamp(0, calc((0.42 - var(--sc-p, 1)) / 0.3), 1); }
+  .ph { will-change: transform; }
+  .ph--a { position: relative; z-index: 2; transform: translate3d(calc(var(--k) * 30%), calc(var(--k) * 24px), 0) rotate(calc(var(--k) * -3deg)); }
+  .ph--b { transform: translate3d(calc(var(--k) * -78%), calc(var(--k) * 40px), 0) rotate(calc(var(--k) * 5deg)) scale(calc(1 - var(--k) * .06)); opacity: calc(1 - var(--k) * .5); }
+  .ph figcaption { opacity: calc(1 - var(--k) * 1.6); }
+  @media (prefers-reduced-motion: reduce) { .phones { --k: 0; } }
   .phone { border-radius: 34px; padding: 8px; background: #0c0b09; border: 1px solid #2c2822; box-shadow: 0 40px 60px -30px rgba(0,0,0,.8); }
   .phone img { width: 100%; height: auto; border-radius: 27px; display: block; }
   .phones figcaption { margin-top: .8rem; }
@@ -211,7 +227,6 @@
     .sync__stage { padding-top: 4.5rem; align-content: center; gap: 1.6rem; }
     .src-list { display: none; }
     .sync__copy .prose { font-size: .92rem; }
-    .phones figure:nth-child(2) { margin-top: 2rem; }
     .specs { grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -244,7 +259,7 @@
       <div>
         <p class="lbl">Signal Desk Pro <b>· for iPhone</b></p>
         <h1 id="h-face">Hear your mix the way <em>everyone else</em> will.</h1>
-        <p class="lede">A player built for mixing engineers. Pull bounces from Dropbox, check them through twelve console modes and nine meters, then send the master on.</p>
+        <p class="lede">A player built for mixing engineers. Pull bounces from Dropbox, Google Drive or your phone itself, check them through twelve console modes and nine meters, then send the master on.</p>
         <div class="face__controls">
           <button class="key key--power" id="power" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>
@@ -362,12 +377,12 @@
       <div class="log panel" role="log" aria-label="Example sync session">
         <div class="log__head"><span>Dropbox › Apps › Signal Desk Pro</span><span>Example</span></div>
         <ol>
-          <li data-sc-cue="0.02"><span class="t">09:41</span><span class="f">Woven/One Way Out v09.wav</span><span class="s">synced</span></li>
-          <li data-sc-cue="0.14"><span class="t">09:41</span><span class="f">Woven/Stay Low v03.aiff</span><span class="s">synced</span></li>
-          <li data-sc-cue="0.26"><span class="t">09:42</span><span class="f">Woven/cover.jpg</span><span class="s">cover art</span></li>
-          <li data-sc-cue="0.40"><span class="t">11:07</span><span class="f">Woven/One Way Out v10.wav</span><span class="s ask">update? review</span></li>
-          <li data-sc-cue="0.54"><span class="t">11:08</span><span class="f">Client refs/Brief mix.mp3</span><span class="s new">new</span></li>
-          <li data-sc-cue="0.68"><span class="t">11:08</span><span class="f">Woven/Stay Low v02.aiff</span><span class="s">removed</span></li>
+          <li data-sc-cue="0.02"><span class="t">09:41</span><span class="f">Harbor Lights/Saltwater_MIX_v09.wav</span><span class="s">synced</span></li>
+          <li data-sc-cue="0.14"><span class="t">09:41</span><span class="f">Harbor Lights/Undertow_mix3_24b.aiff</span><span class="s">synced</span></li>
+          <li data-sc-cue="0.26"><span class="t">09:42</span><span class="f">Harbor Lights/cover.jpg</span><span class="s">cover art</span></li>
+          <li data-sc-cue="0.40"><span class="t">11:07</span><span class="f">Harbor Lights/Saltwater_MIX_v10_vocal_up.wav</span><span class="s ask">update? review</span></li>
+          <li data-sc-cue="0.54"><span class="t">11:08</span><span class="f">Refs/Kessler_Night_Drive_REF.mp3</span><span class="s new">new</span></li>
+          <li data-sc-cue="0.68"><span class="t">11:08</span><span class="f">Harbor Lights/Undertow_mix2_24b.aiff</span><span class="s">removed</span></li>
         </ol>
         <p class="log__foot" data-sc-cue="0.8">2 changes waiting. Choose what to bring in. Skipped items stay on the list until you decide.</p>
       </div>
@@ -375,11 +390,11 @@
   </section>
 
   <!-- 5 · EXPORT + LIBRARY -->
-  <section class="take" id="export" aria-labelledby="h-take">
+  <section class="take" id="export" data-sc-act="flow" aria-labelledby="h-take">
     <div class="take__grid">
       <div class="phones">
-        <figure data-sc-reveal="up" data-sc-reveal-at="0.05 0.45"><div class="phone"><img src="screenshots/screen1.png" width="1206" height="2622" alt="Now Playing: an AIFF from Dropbox on the analog VU meters with the console row below" loading="lazy"></div><figcaption class="lbl">Now Playing</figcaption></figure>
-        <figure data-sc-reveal="up" data-sc-reveal-at="0.12 0.55"><div class="phone"><img src="screenshots/screen2.png" width="1206" height="2622" alt="Stereo Field meter with the Width control set to 100 percent" loading="lazy"></div><figcaption class="lbl">Width + Stereo Field</figcaption></figure>
+        <figure class="ph ph--a"><div class="phone"><img src="screenshots/screen1.png" width="1206" height="2622" alt="Now Playing: an AIFF from Dropbox on the analog VU meters with the console row below" loading="lazy"></div><figcaption class="lbl">Now Playing</figcaption></figure>
+        <figure class="ph ph--b"><div class="phone"><img src="screenshots/screen2.png" width="1206" height="2622" alt="Stereo Field meter with the Width control set to 100 percent" loading="lazy"></div><figcaption class="lbl">Stereo Field</figcaption></figure>
       </div>
       <div>
         <p class="lbl">Library <b>· Export</b></p>
