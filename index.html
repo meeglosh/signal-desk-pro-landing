@@ -36,9 +36,8 @@
 
 
   /* Grain: dark and light specks in balance, so the texture reads without lifting the page's overall darkness */
-  .grain, .grain::after { position: fixed; inset: 0; z-index: 40; pointer-events: none; background-size: 220px; }
-  .grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3 1.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: var(--grain-dark, .32); }
-  .grain::after { content: ""; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 3 -1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: var(--grain-light, .065); }
+  /* Grain lives in the console panels' own background, under the content, so type and meters stay clean */
+  main .panel { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 .8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .3 -.14'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(180deg, var(--panel-hi), var(--panel) 40%); background-size: 220px, 220px, auto; }
 
   /* Engraved label idiom: the page's only "eyebrow" voice */
   .lbl { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--engrave); }
@@ -243,7 +242,6 @@
 <body>
 
 <span data-sc-progress></span>
-<div class="grain" aria-hidden="true"></div>
 
 <header class="strip">
   <a class="strip__mark" href="#top" aria-label="Signal Desk Pro, top"><i aria-hidden="true"></i>Signal Desk Pro</a>
@@ -552,14 +550,14 @@
 
     // Synth chord hits through a dotted-eighth echo, hard left with repeats bouncing right
     const echoIn = oc.createGain(), dl = oc.createDelay(1), fb = oc.createGain(), damp = oc.createBiquadFilter(), wet = oc.createGain();
-    dl.delayTime.value = s * 3; fb.gain.value = .45; damp.type = 'lowpass'; damp.frequency.value = 2400; wet.gain.value = .55;
+    dl.delayTime.value = s * 3; fb.gain.value = .45; damp.type = 'lowpass'; damp.frequency.value = 2400; wet.gain.value = .7;
     echoIn.connect(dl).connect(damp).connect(fb).connect(dl); damp.connect(wet).connect(pan(.8));
     const STAB = pan(-.55);
     const stab = (t, notes) => notes.forEach(f => ['sawtooth', 'square'].forEach((type, k) => {
       const o = oc.createOscillator(), lp = oc.createBiquadFilter(), g = oc.createGain();
       o.type = type; o.frequency.value = f; o.detune.value = k ? -9 : 9; lp.type = 'lowpass'; lp.Q.value = 5;
       lp.frequency.setValueAtTime(5200, t); lp.frequency.exponentialRampToValueAtTime(700, t + .22);
-      g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .3);
       o.connect(lp).connect(g); g.connect(STAB); g.connect(echoIn); o.start(t); o.stop(t + .32); }));
     const E1 = 41.2, E2 = 82.4, G2 = 98, A2 = 110, B1 = 61.7, D2 = 73.4;
     const bassBar = [[0, E1, 2.5], [3, E2, .9], [5, E1, .9], [7, G2, .9], [8, A2, .9, G2], [10, E1, 1.5], [12, D2, .9], [14, E2, 1.2, B1 * 2]];
