@@ -1,0 +1,4 @@
+exclude:
+  - HANDOFF.md
+  - tools
+  - woltspace.json
